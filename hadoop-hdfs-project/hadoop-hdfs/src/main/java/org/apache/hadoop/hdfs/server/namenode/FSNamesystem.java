@@ -357,7 +357,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   // Block pool ID used by this namenode
   private String blockPoolId;
-
+  //租约管理器
   final LeaseManager leaseManager = new LeaseManager(this); 
 
   volatile Daemon smmthread = null;  // SafeModeMonitor thread
@@ -1048,7 +1048,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     ret.addAll(getSharedEditsDirs(conf));
     return ret;
   }
-
+//获取namenode 本地存储路径
   private static Collection<URI> getStorageDirs(Configuration conf,
                                                 String propertyName) {
     Collection<String> dirNames = conf.getTrimmedStringCollection(propertyName);
