@@ -105,11 +105,15 @@ public class BlockManager {
   
   private final PendingDataNodeMessages pendingDNMessages =
     new PendingDataNodeMessages();
-
+  //正在复制的数据块
   private volatile long pendingReplicationBlocksCount = 0L;
+  //损坏的数据块
   private volatile long corruptReplicaBlocksCount = 0L;
+  //需要复制的数据块
   private volatile long underReplicatedBlocksCount = 0L;
+  //当前正在处理的复制工作数目
   private volatile long scheduledReplicationBlocksCount = 0L;
+  //超过配额的数据块
   private AtomicLong excessBlocksCount = new AtomicLong(0L);
   private AtomicLong postponedMisreplicatedBlocksCount = new AtomicLong(0L);
   
@@ -130,6 +134,7 @@ public class BlockManager {
     return scheduledReplicationBlocksCount;
   }
   /** Used by metrics */
+  //正在删除的数据块
   public long getPendingDeletionBlocksCount() {
     return invalidateBlocks.numBlocks();
   }
@@ -153,6 +158,7 @@ public class BlockManager {
    * Mapping: Block -> { BlockCollection, datanodes, self ref }
    * Updated only in response to client-sent information.
    */
+  //Block -> BlockInfo(INode, datanodes, previous BlockInfo, next BlockInfo)的对应
   final BlocksMap blocksMap;
 
   /** Replication thread. */
@@ -177,6 +183,7 @@ public class BlockManager {
    * Maps a StorageID to the set of blocks that are "extra" for this
    * DataNode. We'll eventually remove these extras.
    */
+  ///保存每个DataNode上有效，但超过配额需要删除的数据, StorageID -> TreeSet<Block>的对应关系
   public final Map<String, LightWeightLinkedSet<Block>> excessReplicateMap =
     new TreeMap<String, LightWeightLinkedSet<Block>>();
 
@@ -184,8 +191,9 @@ public class BlockManager {
    * Store set of Blocks that need to be replicated 1 or more times.
    * We also store pending replication-orders.
    */
+  //保存需要进行复制的数据块
   public final UnderReplicatedBlocks neededReplications = new UnderReplicatedBlocks();
-
+   //保存正在复制的数据块的相关信息
   @VisibleForTesting
   final PendingReplicationBlocks pendingReplications;
 
@@ -478,7 +486,7 @@ public class BlockManager {
               " d: " + numReplicas.decommissionedReplicas() +
               " c: " + numReplicas.corruptReplicas() +
               " e: " + numReplicas.excessReplicas() + ") "); 
-
+     //保存失效（如：校验没通过）的Block -> DataNode的对应关系
     Collection<DatanodeDescriptor> corruptNodes = 
                                   corruptReplicas.getNodes(block);
     

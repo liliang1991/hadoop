@@ -302,6 +302,10 @@ class HeartbeatManager implements DatanodeStatistics {
   /** Datanode statistics.
    * For decommissioning/decommissioned nodes, only used capacity is counted.
    */
+  //系统总容量/已使用容量/剩余容量
+  //private long capacityTotal = 0L, capacityUsed = 0L, capacityRemaining = 0L;
+  //系统总连接数，根据DataNode心跳信息跟新。
+ // private int totalLoad = 0;
   private static class Stats {
     private long capacityTotal = 0L;
     private long capacityUsed = 0L;

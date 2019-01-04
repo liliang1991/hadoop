@@ -86,6 +86,7 @@ public class DatanodeManager {
    * <p>
    * Mapping: StorageID -> DatanodeDescriptor
    */
+  //保存系统内所有的Datanode, StorageID -> DatanodeDescriptor的对应关系
   private final NavigableMap<String, DatanodeDescriptor> datanodeMap
       = new TreeMap<String, DatanodeDescriptor>();
 
