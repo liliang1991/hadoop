@@ -479,9 +479,10 @@ public class NameNode {
    * @param conf the configuration
    */
   protected void initialize(Configuration conf) throws IOException {
+    //kerberos 认证和用户组相应的权限
     UserGroupInformation.setConfiguration(conf);
     loginAsNameNodeUser(conf);
-
+     //初始化监控系统
     NameNode.initMetrics(conf, this.getRole());
 
     if (NamenodeRole.NAMENODE == role) {
