@@ -124,7 +124,8 @@ import com.google.common.collect.Lists;
  * NameNode state, for example partial blocksMap etc.
  **********************************************************/
 @InterfaceAudience.Private
-public class NameNode {
+public class
+NameNode {
   static{
     HdfsConfiguration.init();
   }
