@@ -44,6 +44,13 @@ public final class HdfsServerConstants {
   }
 
   /** Startup options */
+ /* format：格式化NameNode，建立NameNode节点的文件结构。带有format参数启动NameNode节点时，首先启动NameNode节点，然后对其机型格式化，再关闭节点，如果文件目录已经存在当前文件系统，则会提示用户。它有两个参数nonInteractive和force，nonInteractive表示如果NameNode节点的文件夹在当前的底层文件系统中存在，那么用户将不会收到提示，并且当前的格式化会失败，force表示不管NameNode的目录存不存在，强制格式化NameNode节点，也不会提示用户，如果nonInteractive和force参数同时存在，那么force参数将会被忽略；
+  upgrade：升级系统；
+  rollback：从升级系统中回滚到前一个版本，这个参数必须在停止的集群分布式文件系统中使用；
+  finalize：提交一次升级，使用这个参数将会删除前一个版本的文件系统，并且当前版本的文件系统将会变成所使用的文件系统，并且rollback参数将不会再有效，这个参数最终会停止NameNode。
+  importCheckpoint：从名字节点的一个检查点恢复，这个参数将会从检查点目录导入镜像文件，作为NameNode的文件目录结构。
+  recover：执行元数据恢复，
+  在startupOption类中，还有一个枚举值是REGULAR，它表示正常启动NameNode*/
   static public enum StartupOption{
     FORMAT  ("-format"),
     CLUSTERID ("-clusterid"),
