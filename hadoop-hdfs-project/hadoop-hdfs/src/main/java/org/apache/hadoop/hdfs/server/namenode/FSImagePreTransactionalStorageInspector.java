@@ -74,7 +74,7 @@ class FSImagePreTransactionalStorageInspector extends FSImageStorageInspector {
   private List<String> editsDirs = new ArrayList<String>();
   
   @Override
-  void inspectDirectory(StorageDirectory sd) throws IOException {
+  public void inspectDirectory(StorageDirectory sd) throws IOException {
     // Was the file just formatted?
     if (!sd.getVersionFile().exists()) {
       hasOutOfDateStorageDirs = true;
@@ -143,12 +143,12 @@ class FSImagePreTransactionalStorageInspector extends FSImageStorageInspector {
   }
 
   @Override
-  boolean isUpgradeFinalized() {
+ public boolean isUpgradeFinalized() {
     return isUpgradeFinalized;
   }
     
   @Override
-  List<FSImageFile> getLatestImages() throws IOException {
+ public List<FSImageFile> getLatestImages() throws IOException {
     // We should have at least one image and one edits dirs
     if (latestNameSD == null)
       throw new IOException("Image file is not found in " + imageDirs);
@@ -187,7 +187,7 @@ class FSImagePreTransactionalStorageInspector extends FSImageStorageInspector {
   }
 
   @Override
-  boolean needToSave() {
+ public boolean needToSave() {
     return hasOutOfDateStorageDirs ||
       checkpointTimes.size() != 1 ||
       latestNameCheckpointTime > latestEditsCheckpointTime ||
@@ -270,7 +270,7 @@ class FSImagePreTransactionalStorageInspector extends FSImageStorageInspector {
   }
   
   @Override
-  long getMaxSeenTxId() {
+  public long getMaxSeenTxId() {
     return 0L;
   }
 

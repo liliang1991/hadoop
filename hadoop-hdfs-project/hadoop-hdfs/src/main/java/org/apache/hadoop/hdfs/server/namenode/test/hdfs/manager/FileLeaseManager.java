@@ -19,8 +19,9 @@ import static org.apache.hadoop.util.Time.now;
 
 public class FileLeaseManager {
     public static final Log LOG = LogFactory.getLog(FileLeaseManager.class);
-
+    // 按照时间进行排序的租约队列
     private SortedSet<Lease> sortedLeases = new TreeSet<Lease>();
+    // 租约持有者对租约的映射图
     private SortedMap<String, Lease> leases = new TreeMap<String, Lease>();
     private long hardLimit = HdfsConstants.LEASE_HARDLIMIT_PERIOD;
     private long softLimit = HdfsConstants.LEASE_SOFTLIMIT_PERIOD;
@@ -66,8 +67,11 @@ public class FileLeaseManager {
 
 
    public class Lease implements Comparable<Lease> {
-        private final String holder;
+        // // 租约持有者
+        private final String holder;\
+       // 最近更新时间
         private long lastUpdate;
+        //// 当前租约持有者打开的文件
         private final Collection<String> paths = new TreeSet<String>();
 
         /** Only LeaseManager object can create a lease */

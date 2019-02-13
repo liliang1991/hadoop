@@ -20,7 +20,9 @@ import org.apache.hadoop.util.Time;
 
 import java.io.IOException;
 import java.util.*;
-
+/*
+表示可以创建快照的目录
+ */
 public class FileINodeDirectorySnapshottable extends FileINodeDirectoryWithSnapshot {
   public   static final int SNAPSHOT_LIMIT = 1 << 16;
 
@@ -64,8 +66,12 @@ public class FileINodeDirectorySnapshottable extends FileINodeDirectoryWithSnaps
     public boolean isSnapshottable() {
         return true;
     }
+    public Snapshot getSnapshot(byte[] snapshotName) {
+        final int i = searchSnapshot(snapshotName);
+        return i < 0? null: snapshotsByNames.get(i);
+    }
 
-  public   Snapshot addSnapshot(int id, String name) throws SnapshotException,
+    public   Snapshot addSnapshot(int id, String name) throws SnapshotException,
             QuotaExceededException {
         //check snapshot quota
         final int n = getNumSnapshots();
@@ -142,7 +148,7 @@ public class FileINodeDirectorySnapshottable extends FileINodeDirectoryWithSnaps
             }
             // remove the one with old name from snapshotsByNames
             Snapshot snapshot = snapshotsByNames.remove(indexOfOld);
-            final INodeDirectory ssRoot = snapshot.getRoot();
+            final FileINodeDirectory ssRoot = snapshot.getFileRoot();
             ssRoot.setLocalName(newNameBytes);
             indexOfNew = -indexOfNew - 1;
             if (indexOfNew <= indexOfOld) {
@@ -161,7 +167,7 @@ public class FileINodeDirectorySnapshottable extends FileINodeDirectoryWithSnaps
             return replaceSelf4INodeDirectory(inodeMap);
         } else {
             return replaceSelf4INodeDirectoryWithSnapshot(inodeMap)
-                    .recordModification(latest, null);
+                    .recordFileModification(latest, null);
         }
     }
     public SnapshotDiffInfo computeDiff(final String from, final String to)
@@ -228,6 +234,10 @@ public class FileINodeDirectorySnapshottable extends FileINodeDirectoryWithSnaps
             }
         }
     }
+    public ReadOnlyList<Snapshot> getSnapshotList() {
+        return ReadOnlyList.Util.asReadOnlyList(snapshotsByNames);
+    }
+
     public static class SnapshotDiffInfo {
         /** Compare two inodes based on their full names */
         public static final Comparator<INode> INODE_COMPARATOR =
@@ -263,7 +273,7 @@ public class FileINodeDirectorySnapshottable extends FileINodeDirectoryWithSnaps
         /**
          * A map capturing the detailed difference about file creation/deletion.
          * Each key indicates a directory whose children have been changed between
-         * the two snapshots, while its associated value is a {@link INodeDirectoryWithSnapshot.ChildrenDiff}
+         * the two snapshots, while its associated value is a {@link FileINodeDirectoryWithSnapshot.ChildrenDiff}
          * storing the changes (creation/deletion) happened to the children (files).
          */
         private final Map<FileINodeDirectoryWithSnapshot, ChildrenDiff> dirDiffMap =
@@ -305,7 +315,7 @@ public class FileINodeDirectorySnapshottable extends FileINodeDirectoryWithSnaps
                 if (node.isDirectory()) {
                     ChildrenDiff dirDiff = dirDiffMap.get(node);
                     List<SnapshotDiffReport.DiffReportEntry> subList = dirDiff.generateReport(
-                            diffMap.get(node), (INodeDirectoryWithSnapshot) node,
+                            diffMap.get(node), (FileINodeDirectoryWithSnapshot) node,
                             isFromEarlier());
                     diffReportList.addAll(subList);
                 }

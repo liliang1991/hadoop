@@ -97,7 +97,7 @@ public abstract class EditLogOutputStream implements Closeable {
    * returning
    * @throws IOException
    */
-  abstract protected void flushAndSync(boolean durable) throws IOException;
+   abstract public void flushAndSync(boolean durable) throws IOException;
 
   /**
    * Flush data to persistent store.
@@ -129,14 +129,14 @@ public abstract class EditLogOutputStream implements Closeable {
   /**
    * Return total time spent in {@link #flushAndSync()}
    */
-  long getTotalSyncTime() {
+ public long getTotalSyncTime() {
     return totalTimeSync;
   }
 
   /**
    * Return number of calls to {@link #flushAndSync()}
    */
-  protected long getNumSync() {
+  public long getNumSync() {
     return numSync;
   }
 

@@ -15,6 +15,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.FileNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.*;
+import org.apache.hadoop.hdfs.util.CyclicIteration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.*;
 import org.apache.hadoop.util.Daemon;
@@ -33,6 +34,7 @@ public class FileDatanodeManager {
     static final Log LOG = LogFactory.getLog(FileDatanodeManager.class);
 
     private Namesystem namesystem;
+    // 负责接收管理来自 DataNode 的消息，具体的管理操作由 DatanodeManager 接管
     FileBlockManager blockManager;
     FileHeartbeatManager heartbeatManager;
 
@@ -44,7 +46,7 @@ public class FileDatanodeManager {
     private final int defaultInfoSecurePort;
 
     private final int defaultIpcPort;
-    FileHostManager hostFileManager;
+    FileHostManager hostFileManager=new FileHostManager();
 
     DNSToSwitchMapping dnsToSwitchMapping;
     final int blockInvalidateLimit;
@@ -721,6 +723,12 @@ public class FileDatanodeManager {
         }
         return newID;
     }
+public     CyclicIteration<String, DatanodeDescriptor> getDatanodeCyclicIteration(
+            final String firstkey) {
+        return new CyclicIteration<String, DatanodeDescriptor>(
+                datanodeMap, firstkey);
+    }
+
     /** Start decommissioning the specified datanode. */
     private void startDecommission(DatanodeDescriptor node) {
         if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
@@ -733,7 +741,7 @@ public class FileDatanodeManager {
             checkDecommissionState(node);
         }
     }
-    boolean checkDecommissionState(DatanodeDescriptor node) {
+  public   boolean checkDecommissionState(DatanodeDescriptor node) {
         // Check to see if all blocks in this decommissioned
         // node has reached their target replication factor.
         if (node.isDecommissionInProgress()) {

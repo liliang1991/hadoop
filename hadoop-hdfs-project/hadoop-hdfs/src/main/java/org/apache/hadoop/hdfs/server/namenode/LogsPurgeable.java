@@ -24,7 +24,7 @@ import java.util.Collection;
  * Interface used to abstract over classes which manage edit logs that may need
  * to be purged.
  */
-interface LogsPurgeable {
+public interface LogsPurgeable {
   
   /**
    * Remove all edit logs with transaction IDs lower than the given transaction

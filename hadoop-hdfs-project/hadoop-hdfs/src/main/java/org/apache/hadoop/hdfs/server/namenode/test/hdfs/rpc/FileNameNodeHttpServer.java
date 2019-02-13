@@ -6,7 +6,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
-import org.apache.hadoop.hdfs.server.namenode.test.hdfs.NameNodeTest;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.MyNameNode;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.FileSystenImage;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.web.AuthFilter;
@@ -26,7 +26,7 @@ import java.util.Map;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
 
 public class FileNameNodeHttpServer {
-    private NameNodeTest nn;
+    private MyNameNode nn;
 
     HttpServer httpServer;
     private InetSocketAddress httpAddress;
@@ -39,7 +39,7 @@ public class FileNameNodeHttpServer {
 
     public FileNameNodeHttpServer(
             Configuration conf,
-            NameNodeTest nn,
+            MyNameNode nn,
             InetSocketAddress bindAddress) {
         this.conf = conf;
         this.nn = nn;

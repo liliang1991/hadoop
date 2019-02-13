@@ -39,6 +39,8 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottab
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeDirectoryAttributes;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.FileNamesystem;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ShortWritable;
@@ -108,7 +110,7 @@ public class FSImageSerialization {
   // Helper function that reads in an INodeUnderConstruction
   // from the input stream
   //
-  static INodeFileUnderConstruction readINodeUnderConstruction(
+ public static INodeFileUnderConstruction readINodeUnderConstruction(
       DataInput in, FSNamesystem fsNamesys, int imgVersion)
       throws IOException {
     byte[] name = readBytes(in);
@@ -152,11 +154,54 @@ public class FSImageSerialization {
                                           clientMachine,
                                           null);
   }
+    public static INodeFileUnderConstruction readINodeUnderConstruction(
+            DataInput in, FileNamesystem fsNamesys, int imgVersion)
+            throws IOException {
+        byte[] name = readBytes(in);
+        long inodeId = LayoutVersion.supports(Feature.ADD_INODE_ID, imgVersion) ? in
+                .readLong() : fsNamesys.allocateNewInodeId();
+        short blockReplication = in.readShort();
+        long modificationTime = in.readLong();
+        long preferredBlockSize = in.readLong();
 
+        int numBlocks = in.readInt();
+        BlockInfo[] blocks = new BlockInfo[numBlocks];
+        Block blk = new Block();
+        int i = 0;
+        for (; i < numBlocks-1; i++) {
+            blk.readFields(in);
+            blocks[i] = new BlockInfo(blk, blockReplication);
+        }
+        // last block is UNDER_CONSTRUCTION
+        if(numBlocks > 0) {
+            blk.readFields(in);
+            blocks[i] = new BlockInfoUnderConstruction(
+                    blk, blockReplication, BlockUCState.UNDER_CONSTRUCTION, null);
+        }
+        PermissionStatus perm = PermissionStatus.read(in);
+        String clientName = readString(in);
+        String clientMachine = readString(in);
+
+        // We previously stored locations for the last block, now we
+        // just record that there are none
+        int numLocs = in.readInt();
+        assert numLocs == 0 : "Unexpected block locations";
+
+        return new INodeFileUnderConstruction(inodeId,
+                name,
+                blockReplication,
+                modificationTime,
+                preferredBlockSize,
+                blocks,
+                perm,
+                clientName,
+                clientMachine,
+                null);
+    }
   // Helper function that writes an INodeUnderConstruction
   // into the input stream
   //
-  static void writeINodeUnderConstruction(DataOutputStream out,
+ public static void writeINodeUnderConstruction(DataOutputStream out,
                                            INodeFileUnderConstruction cons,
                                            String path) 
                                            throws IOException {
@@ -260,7 +305,15 @@ public class FSImageSerialization {
     out.writeLong(a.getNsQuota());
     out.writeLong(a.getDsQuota());
   }
+  public static void writeFileINodeDirectoryAttributes(
+          FileINodeDirectoryAttributes a, DataOutput out) throws IOException {
+    writeLocalName(a, out);
+    writePermissionStatus(a, out);
+    out.writeLong(a.getModificationTime());
 
+    out.writeLong(a.getNsQuota());
+    out.writeLong(a.getDsQuota());
+  }
   /**
    * Serialize a {@link INodeSymlink} node
    * @param node The node to write

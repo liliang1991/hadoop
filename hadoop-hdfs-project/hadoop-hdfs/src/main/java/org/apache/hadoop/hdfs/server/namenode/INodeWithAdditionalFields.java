@@ -22,9 +22,12 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeMap;
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
 
 import com.google.common.base.Preconditions;
+
+import java.util.List;
 
 /**
  * {@link INode} with additional fields including id, name, permission,
@@ -33,7 +36,7 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public abstract class INodeWithAdditionalFields extends INode
     implements LinkedElement {
-  static enum PermissionStatusFormat {
+  public static enum PermissionStatusFormat {
     MODE(0, 16),
     GROUP(MODE.OFFSET + MODE.LENGTH, 25),
     USER(GROUP.OFFSET + GROUP.LENGTH, 23);
@@ -48,7 +51,7 @@ public abstract class INodeWithAdditionalFields extends INode
       MASK = ((-1L) >>> (64 - LENGTH)) << OFFSET;
     }
 
-    long retrieve(long record) {
+    public long retrieve(long record) {
       return (record & MASK) >>> OFFSET;
     }
 
@@ -57,7 +60,7 @@ public abstract class INodeWithAdditionalFields extends INode
     }
 
     /** Encode the {@link PermissionStatus} to a long. */
-    static long toLong(PermissionStatus ps) {
+   public static long toLong(PermissionStatus ps) {
       long permission = 0L;
       final int user = SerialNumberManager.INSTANCE.getUserSerialNumber(
           ps.getUserName());
@@ -96,7 +99,7 @@ public abstract class INodeWithAdditionalFields extends INode
   /** For implementing {@link LinkedElement}. */
   private LinkedElement next = null;
 
-  private INodeWithAdditionalFields(INode parent, long id, byte[] name,
+  public INodeWithAdditionalFields(INode parent, long id, byte[] name,
       long permission, long modificationTime, long accessTime) {
     super(parent);
     this.id = id;
@@ -106,14 +109,49 @@ public abstract class INodeWithAdditionalFields extends INode
     this.accessTime = accessTime;
   }
 
-  INodeWithAdditionalFields(long id, byte[] name, PermissionStatus permissions,
+  public INodeWithAdditionalFields(long id, byte[] name, PermissionStatus permissions,
       long modificationTime, long accessTime) {
     this(null, id, name, PermissionStatusFormat.toLong(permissions),
         modificationTime, accessTime);
   }
-  
-  /** @param other Other node to be copied */
-  INodeWithAdditionalFields(INodeWithAdditionalFields other) {
+
+    @Override
+    public INode recordModification(Snapshot latest, INodeMap inodeMap) throws QuotaExceededException {
+        return null;
+    }
+
+    @Override
+    public INode recordFileModification(Snapshot latest, FileINodeMap inodeMap) throws QuotaExceededException {
+        return null;
+    }
+
+    @Override
+    public Quota.Counts cleanSubtree(Snapshot snapshot, Snapshot prior, BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes, boolean countDiffChange) throws QuotaExceededException {
+        return null;
+    }
+
+    @Override
+    public void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes) {
+
+    }
+
+    @Override
+    public Content.Counts computeContentSummary(Content.Counts counts) {
+        return null;
+    }
+
+    @Override
+    public Quota.Counts computeQuotaUsage(Quota.Counts counts, boolean useCache, int lastSnapshotId) {
+        return null;
+    }
+
+    @Override
+    public INode updateModificationTime(long mtime, Snapshot latest, INodeMap inodeMap) throws QuotaExceededException {
+        return null;
+    }
+
+    /** @param other Other node to be copied */
+  public INodeWithAdditionalFields(INodeWithAdditionalFields other) {
     this(other.getParentReference() != null ? other.getParentReference()
         : other.getParent(), other.getId(), other.getLocalNameBytes(),
         other.permission, other.modificationTime, other.accessTime);
@@ -146,7 +184,7 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   /** Clone the {@link PermissionStatus}. */
-  final void clonePermissionStatus(INodeWithAdditionalFields that) {
+  public final void clonePermissionStatus(INodeWithAdditionalFields that) {
     this.permission = that.permission;
   }
 
@@ -161,7 +199,7 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
-  final String getUserName(Snapshot snapshot) {
+ public final String getUserName(Snapshot snapshot) {
     if (snapshot != null) {
       return getSnapshotINode(snapshot).getUserName();
     }
@@ -177,7 +215,7 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
-  final String getGroupName(Snapshot snapshot) {
+ public final String getGroupName(Snapshot snapshot) {
     if (snapshot != null) {
       return getSnapshotINode(snapshot).getGroupName();
     }
@@ -187,13 +225,13 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
-  final void setGroup(String group) {
+ public final void setGroup(String group) {
     int n = SerialNumberManager.INSTANCE.getGroupSerialNumber(group);
     updatePermissionStatus(PermissionStatusFormat.GROUP, n);
   }
 
   @Override
-  final FsPermission getFsPermission(Snapshot snapshot) {
+ public final FsPermission getFsPermission(Snapshot snapshot) {
     if (snapshot != null) {
       return getSnapshotINode(snapshot).getFsPermission();
     }
@@ -217,7 +255,7 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
-  final long getModificationTime(Snapshot snapshot) {
+ public final long getModificationTime(Snapshot snapshot) {
     if (snapshot != null) {
       return getSnapshotINode(snapshot).getModificationTime();
     }
@@ -228,16 +266,16 @@ public abstract class INodeWithAdditionalFields extends INode
 
   /** Update modification time if it is larger than the current value. */
   @Override
-  public final INode updateModificationTime(long mtime, Snapshot latest,
-      final INodeMap inodeMap) throws QuotaExceededException {
+  public final INode updateFileModificationTime(long mtime, Snapshot latest,
+      final FileINodeMap inodeMap) throws QuotaExceededException {
     Preconditions.checkState(isDirectory());
     if (mtime <= modificationTime) {
       return this;
     }
-    return setModificationTime(mtime, latest, inodeMap);
+    return setFileModificationTime(mtime, latest, inodeMap);
   }
 
-  final void cloneModificationTime(INodeWithAdditionalFields that) {
+ public final void cloneModificationTime(INodeWithAdditionalFields that) {
     this.modificationTime = that.modificationTime;
   }
 
@@ -247,7 +285,7 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
-  final long getAccessTime(Snapshot snapshot) {
+  public final long getAccessTime(Snapshot snapshot) {
     if (snapshot != null) {
       return getSnapshotINode(snapshot).getAccessTime();
     }

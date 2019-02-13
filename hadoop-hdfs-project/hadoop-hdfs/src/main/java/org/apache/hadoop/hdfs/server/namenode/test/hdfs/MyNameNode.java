@@ -15,7 +15,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.hdfs.server.namenode.ha.ActiveState;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
@@ -48,7 +47,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 
-public class NameNodeTest {
+public class MyNameNode {
    static Configuration conf=new HdfsConfiguration();
     static {
         HdfsConfiguration.init();
@@ -79,9 +78,10 @@ public class NameNodeTest {
     private List<ServicePlugin> plugins;
 
     NamenodeRole namenodeRole= NamenodeRole.NAMENODE;
-    public static final Log LOG = LogFactory.getLog(NameNodeTest.class.getName());
-    public NameNodeTest()throws  Exception{
+    public static final Log LOG = LogFactory.getLog(MyNameNode.class.getName());
+    public MyNameNode()throws  Exception{
         this.namesystem=FileNamesystem.getLoadDisk(conf);
+        metrics = NameNodeMetrics.create(conf, NamenodeRole.NAMENODE);
 
         state.prepareToEnterState(haContext);
         state.enterState(haContext);
@@ -107,18 +107,23 @@ public class NameNodeTest {
         return role.equals(that);
     }
 
-    public static void main(String[] args) throws Exception{
+    public static void main(String[] args) {
+       try {
+           System.out.println(conf.size());
+           StartupOption startOpt = StartupOption.REGULAR;
+           conf.set(DFSConfigKeys.DFS_NAMENODE_STARTUP_KEY, startOpt.toString());
+           System.out.println(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
+           MyNameNode namenode=new MyNameNode();
+           if (namenode != null) {
+               namenode.join();
+           }
+       }catch (Exception e){
+           e.printStackTrace();
+       }
 
-        System.out.println(conf.size());
-        StartupOption startOpt = StartupOption.REGULAR;
-        conf.set(DFSConfigKeys.DFS_NAMENODE_STARTUP_KEY, startOpt.toString());
-        System.out.println(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
-        NameNodeTest namenode=new NameNodeTest();
-        if (namenode != null) {
-            namenode.join();
-        }
     }
     protected void initialize(Configuration conf) throws IOException{
+
         rpcServer = createRpcServer(conf);
 
         startCommonServices(conf);
@@ -138,7 +143,7 @@ public class NameNodeTest {
     }
     private void startCommonServices(Configuration conf) throws IOException {
         namesystem.startCommonServices(conf, haContext);
-      /*  if (NamenodeRole.NAMENODE != role) {
+    /*    if (NamenodeRole.NAMENODE != role) {
             startHttpServer(conf);
             httpServer.setNameNodeAddress(getNameNodeAddress());
             httpServer.setFSImage(getFSImage());
@@ -333,7 +338,7 @@ public class NameNodeTest {
         }
     }
     public InetSocketAddress getServiceRpcServerAddress(Configuration conf) {
-        return NameNodeTest.getServiceAddress(conf, false);
+        return MyNameNode.getServiceAddress(conf, false);
     }
     public static InetSocketAddress getServiceAddress(Configuration conf,
                                                       boolean fallback) {
@@ -496,6 +501,20 @@ public class NameNodeTest {
     public static NameNodeMetrics getNameNodeMetrics() {
         return metrics;
     }
-
-
+    public String getServiceRpcServerBindHost(Configuration conf) {
+        String addr = conf.getTrimmed(DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY);
+        if (addr == null || addr.isEmpty()) {
+            return null;
+        }
+        return addr;
+    }
+    public void setRpcServiceServerAddress(Configuration conf,
+                                              InetSocketAddress serviceRPCAddress) {
+        setServiceAddress(conf, NetUtils.getHostPortString(serviceRPCAddress));
+    }
+    public static void setServiceAddress(Configuration conf,
+                                         String address) {
+        LOG.info("Setting ADDRESS " + address);
+        conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, address);
+    }
 }

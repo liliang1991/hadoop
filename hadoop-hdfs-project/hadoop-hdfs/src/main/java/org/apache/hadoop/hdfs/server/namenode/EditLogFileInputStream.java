@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage.HttpGetFailedException;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.FileSystemEditLogLoader;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.SecurityUtil;
@@ -78,7 +79,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
    * @throws IOException if an actual IO error occurs while reading the
    *         header
    */
-  EditLogFileInputStream(File name)
+  public EditLogFileInputStream(File name)
       throws LogHeaderCorruptException, IOException {
     this(name, HdfsConstants.INVALID_TXID, HdfsConstants.INVALID_TXID, false);
   }
@@ -273,7 +274,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
     return getName();
   }
 
-  static FSEditLogLoader.EditLogValidation validateEditLog(File file) throws IOException {
+  static FileSystemEditLogLoader.EditLogValidation validateEditLog(File file) throws IOException {
     EditLogFileInputStream in;
     try {
       in = new EditLogFileInputStream(file);
@@ -281,12 +282,12 @@ public class EditLogFileInputStream extends EditLogInputStream {
     } catch (LogHeaderCorruptException e) {
       // If the header is malformed or the wrong value, this indicates a corruption
       LOG.warn("Log file " + file + " has no valid header", e);
-      return new FSEditLogLoader.EditLogValidation(0,
+      return new FileSystemEditLogLoader.EditLogValidation(0,
           HdfsConstants.INVALID_TXID, true);
     }
     
     try {
-      return FSEditLogLoader.validateEditLog(in);
+      return FileSystemEditLogLoader.validateEditLog(in);
     } finally {
       IOUtils.closeStream(in);
     }

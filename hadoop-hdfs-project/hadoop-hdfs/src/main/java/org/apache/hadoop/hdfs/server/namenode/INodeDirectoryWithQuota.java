@@ -53,7 +53,7 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
     this.nsQuota = nsQuota;
     this.dsQuota = dsQuota;
   }
-  
+
   /** constructor with no quota verification */
   INodeDirectoryWithQuota(long id, byte[] name, PermissionStatus permissions,
       long modificationTime, long nsQuota, long dsQuota) {

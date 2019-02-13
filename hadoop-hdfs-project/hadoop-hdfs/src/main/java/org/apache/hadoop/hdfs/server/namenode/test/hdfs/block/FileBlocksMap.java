@@ -53,6 +53,9 @@ public class FileBlocksMap {private static class NodeIterator implements Iterato
    public Iterator<DatanodeDescriptor> nodeIterator(Block b) {
         return nodeIterator(blocks.get(b));
     }
+    Iterator<DatanodeDescriptor> nodeIterator(BlockInfo storedBlock) {
+        return new FileBlocksMap.NodeIterator(storedBlock);
+    }
   public   BlockInfo addBlockCollection(BlockInfo b, BlockCollection bc) {
         BlockInfo info = blocks.get(b);
         if (info != b) {

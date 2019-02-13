@@ -81,7 +81,8 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
       this.nsQuota = dir.getNsQuota();
       this.dsQuota = dir.getDsQuota();
     }
-    
+
+
     @Override
     public final long getNsQuota() {
       return nsQuota;
@@ -92,4 +93,5 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
       return dsQuota;
     }
   }
+
 }

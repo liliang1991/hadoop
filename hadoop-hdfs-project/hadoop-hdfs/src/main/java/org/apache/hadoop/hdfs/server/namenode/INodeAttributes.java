@@ -61,7 +61,7 @@ public interface INodeAttributes {
     private final long modificationTime;
     private final long accessTime;
 
-    SnapshotCopy(byte[] name, PermissionStatus permissions,
+    public SnapshotCopy(byte[] name, PermissionStatus permissions,
         long modificationTime, long accessTime) {
       this.name = name;
       this.permission = PermissionStatusFormat.toLong(permissions);
@@ -69,7 +69,7 @@ public interface INodeAttributes {
       this.accessTime = accessTime;
     }
 
-    SnapshotCopy(INode inode) {
+    public SnapshotCopy(INode inode) {
       this.name = inode.getLocalNameBytes();
       this.permission = inode.getPermissionLong();
       this.modificationTime = inode.getModificationTime();

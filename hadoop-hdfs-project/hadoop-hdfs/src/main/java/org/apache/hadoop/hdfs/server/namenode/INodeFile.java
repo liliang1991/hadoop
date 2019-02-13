@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeMap;
 
 /** I-node for closed file. */
 @InterfaceAudience.Private
@@ -106,7 +107,7 @@ public class INodeFile extends INodeWithAdditionalFields
 
   private BlockInfo[] blocks;
 
-  INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime, long atime,
+  public INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime, long atime,
       BlockInfo[] blklist, short replication, long preferredBlockSize) {
     super(id, name, permissions, mtime, atime);
     header = HeaderFormat.combineReplication(header, replication);
@@ -165,7 +166,18 @@ public class INodeFile extends INodeWithAdditionalFields
       return this;
     }
   }
-
+  @Override
+  public INodeFile recordFileModification(final Snapshot latest,
+                                      final FileINodeMap inodeMap) throws QuotaExceededException {
+    if (isInLatestSnapshot(latest)) {
+      INodeFileWithSnapshot newFile = getFileParent()
+              .replaceChild4INodeFileWithSnapshot(this, inodeMap)
+              .recordFileModification(latest, inodeMap);
+      return newFile;
+    } else {
+      return this;
+    }
+  }
   /** @return the replication factor of the file. */
   public final short getFileReplication(Snapshot snapshot) {
     if (snapshot != null) {
@@ -200,7 +212,12 @@ public class INodeFile extends INodeWithAdditionalFields
     nodeToUpdate.setFileReplication(replication);
     return nodeToUpdate;
   }
-
+  public final INodeFile setReplication(short replication, Snapshot latest,
+                                           final FileINodeMap inodeMap) throws QuotaExceededException {
+    final INodeFile nodeToUpdate = recordFileModification(latest, inodeMap);
+    nodeToUpdate.setFileReplication(replication);
+    return nodeToUpdate;
+  }
   /** @return preferred block size (in bytes) of the file. */
   @Override
   public long getPreferredBlockSize() {
@@ -213,7 +230,7 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   /** @return the diskspace required for a full block. */
-  final long getBlockDiskspace() {
+public   final long getBlockDiskspace() {
     return getPreferredBlockSize() * getBlockReplication();
   }
 
@@ -223,7 +240,7 @@ public class INodeFile extends INodeWithAdditionalFields
     return this.blocks;
   }
 
-  void updateBlockCollection() {
+  public void updateBlockCollection() {
     if (blocks != null) {
       for(BlockInfo b : blocks) {
         b.setBlockCollection(this);
@@ -234,7 +251,7 @@ public class INodeFile extends INodeWithAdditionalFields
   /**
    * append array of blocks to this.blocks
    */
-  void concatBlocks(INodeFile[] inodes) {
+ public void concatBlocks(INodeFile[] inodes) {
     int size = this.blocks.length;
     int totalAddedBlocks = 0;
     for(INodeFile f : inodes) {
@@ -256,7 +273,7 @@ public class INodeFile extends INodeWithAdditionalFields
   /**
    * add a block to the block list
    */
-  void addBlock(BlockInfo newblock) {
+ public void addBlock(BlockInfo newblock) {
     if (this.blocks == null) {
       this.setBlocks(new BlockInfo[]{newblock});
     } else {
@@ -459,7 +476,7 @@ public class INodeFile extends INodeWithAdditionalFields
   /**
    * Return the penultimate allocated block for this file.
    */
-  BlockInfo getPenultimateBlock() {
+ public BlockInfo getPenultimateBlock() {
     if (blocks == null || blocks.length <= 1) {
       return null;
     }
@@ -486,5 +503,10 @@ public class INodeFile extends INodeWithAdditionalFields
     out.print(", blocks=");
     out.print(blocks == null || blocks.length == 0? null: blocks[0]);
     out.println();
+  }
+
+  @Override
+  public INode updateModificationTime(long mtime, Snapshot latest, INodeMap inodeMap) throws QuotaExceededException {
+    return null;
   }
 }

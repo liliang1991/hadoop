@@ -50,9 +50,9 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.namenode.*;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.MyNameNode;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.SnapshotFileSImageFormat.ReferenceMap;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
@@ -174,7 +174,7 @@ import org.apache.hadoop.io.Text;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class FileImageFormat {
-    private static final Log LOG = FSImage.LOG;
+    private static final Log LOG = FileSystenImage.LOG;
 
     // Static-only class
     public FileImageFormat() {}
@@ -240,7 +240,7 @@ public class FileImageFormat {
             checkNotLoaded();
             assert curFile != null : "curFile is null";
 
-            StartupProgress prog = NameNode.getStartupProgress();
+            StartupProgress prog = MyNameNode.getStartupProgress();
             Step step = new Step(StepType.INODES);
             prog.beginStep(Phase.LOADING_FSIMAGE, step);
             long startTime = now();
@@ -251,6 +251,7 @@ public class FileImageFormat {
             MessageDigest digester = MD5Hash.getDigester();
             DigestInputStream fin = new DigestInputStream(
                     new FileInputStream(curFile), digester);
+
 
             DataInputStream in = new DataInputStream(fin);
             try {
@@ -496,6 +497,112 @@ public class FileImageFormat {
             }
 
             // Step 3. Load children nodes under parent
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             loadChildren(parent, in, counter);
 
             // Step 4. load Directory Diff List
@@ -758,7 +865,8 @@ public class FileImageFormat {
                     return new INodeReference.WithName( withCount, localName,
                             snapshotId);
                 } else {
-                    final INodeReference ref = new INodeReference.DstReference(null,
+                    FileINodeDirectory fileINodeDirectory=null;
+                    final INodeReference ref = new INodeReference.DstReference(fileINodeDirectory,
                             withCount, snapshotId);
                     return ref;
                 }
@@ -1070,7 +1178,9 @@ public class FileImageFormat {
                 out.flush();
                 context.checkCancelled();
                 fout.getChannel().force(true);
-            } finally {
+            }catch (Exception e){
+                e.printStackTrace();
+            }finally {
                 out.close();
             }
 

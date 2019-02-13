@@ -30,11 +30,10 @@ import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.*;
-import org.apache.hadoop.hdfs.server.namenode.test.hdfs.NameNodeTest;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.MyNameNode;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeId;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodesInPath;
@@ -263,7 +262,7 @@ public class FileNamesystem implements Namesystem, FSClusterStats,
         FileSystenImage fsImage = getFSImage(conf);
         FileNamesystem namesystem = new FileNamesystem(conf, fsImage, false);
         /*****************/
-        HdfsServerConstants.StartupOption startOpt = NameNodeTest.getStartupOption(conf);
+        HdfsServerConstants.StartupOption startOpt = MyNameNode.getStartupOption(conf);
         long loadStart = now();
         String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
         namesystem.loadFSImage(startOpt, fsImage,
@@ -281,7 +280,7 @@ public class FileNamesystem implements Namesystem, FSClusterStats,
 
         this.fsLock.writeLock().lock();
         MetaRecoveryContext recovery = startOpt.createRecoveryContext();
-        boolean needToSave = fsImage.recoverTransitionRead(startOpt, fsImage, false, this);
+        boolean needToSave = fsImage.recoverTransitionRead(startOpt, this, recovery);
         if (needToSave)
             fsImage.saveNamespace(this,null);
         if (!haEnabled) {
@@ -444,7 +443,7 @@ public class FileNamesystem implements Namesystem, FSClusterStats,
             long curTime = now();
             if(!rightNow && (curTime - lastStatusReport < 20 * 1000))
                 return;
-            //NameNodeTest.stateChangeLog.info(msg + " \n" + getTurnOffTip());
+            //MyNameNode.stateChangeLog.info(msg + " \n" + getTurnOffTip());
             lastStatusReport = curTime;
         }
       private boolean shouldIncrementallyTrackBlocks() {
@@ -511,9 +510,9 @@ public class FileNamesystem implements Namesystem, FSClusterStats,
                 initializeReplQueues();
             }
             long timeInSafemode = now() - startTime;
-            NameNodeTest.stateChangeLog.info("STATE* Leaving safe mode after "
+            MyNameNode.stateChangeLog.info("STATE* Leaving safe mode after "
                     + timeInSafemode/1000 + " secs");
-          //  NameNodeTest.getNameNodeMetrics().setSafeModeTime((int) timeInSafemode);
+          //  MyNameNode.getNameNodeMetrics().setSafeModeTime((int) timeInSafemode);
 
             //Log the following only once (when transitioning from ON -> OFF)
             if (reached >= 0) {
@@ -1076,7 +1075,7 @@ public class FileNamesystem implements Namesystem, FSClusterStats,
         }
     }
     private static UserGroupInformation getRemoteUser() throws IOException {
-        return NameNodeTest.getRemoteUser();
+        return MyNameNode.getRemoteUser();
     }
 
     public NamespaceInfo getNamespaceInfo() {
@@ -1197,7 +1196,7 @@ public class FileNamesystem implements Namesystem, FSClusterStats,
 
     @Override
     public long getBlocksTotal() {
-        return getBlocksTotal();
+        return blockManager.getTotalBlocks();
     }
 
     @Override
@@ -1331,6 +1330,7 @@ public class FileNamesystem implements Namesystem, FSClusterStats,
     }
  public    void startCommonServices(Configuration conf, HAContext haContext) throws IOException {
      //   this.registerMBean(); // register the MBean for the FSNamesystemState
+
         writeLock();
         this.haContext = haContext;
         try {
@@ -1338,13 +1338,15 @@ public class FileNamesystem implements Namesystem, FSClusterStats,
             checkAvailableResources();
             assert safeMode != null &&
                     !safeMode.isPopulatingReplQueues();
-            StartupProgress prog = NameNode.getStartupProgress();
+            StartupProgress prog = MyNameNode.getStartupProgress();
             prog.beginPhase(Phase.SAFEMODE);
             prog.setTotal(Phase.SAFEMODE, STEP_AWAITING_REPORTED_BLOCKS,
                     getCompleteBlocksTotal());
             setBlockTotal();
             blockManager.activate(conf);
-        } finally {
+        } catch (Exception e){
+            e.printStackTrace();
+        }finally {
             writeUnlock();
         }
 
@@ -2447,7 +2449,7 @@ public class FileNamesystem implements Namesystem, FSClusterStats,
             return prepareFileForWrite(src, myFile, holder, clientMachine, clientNode,
                     true, iip.getLatestSnapshot(), logRetryCache);
         } catch (IOException ie) {
-            NameNodeTest.stateChangeLog.warn("DIR* NameSystem.append: " +ie.getMessage());
+            MyNameNode.stateChangeLog.warn("DIR* NameSystem.append: " +ie.getMessage());
             throw ie;
         }
     }
@@ -2520,8 +2522,8 @@ public class FileNamesystem implements Namesystem, FSClusterStats,
             }
         }
         if (lb != null) {
-            if (NameNodeTest.stateChangeLog.isDebugEnabled()) {
-                NameNodeTest.stateChangeLog.debug("DIR* NameSystem.appendFile: file "
+            if (MyNameNode.stateChangeLog.isDebugEnabled()) {
+                MyNameNode.stateChangeLog.debug("DIR* NameSystem.appendFile: file "
                         +src+" for "+holder+" at "+clientMachine
                         +" block " + lb.getBlock()
                         +" block size " + lb.getBlock().getNumBytes());
@@ -2783,8 +2785,8 @@ public class FileNamesystem implements Namesystem, FSClusterStats,
         int replication;
         DatanodeDescriptor clientNode = null;
 
-        if(NameNodeTest.stateChangeLog.isDebugEnabled()) {
-            NameNodeTest.stateChangeLog.debug(
+        if(MyNameNode.stateChangeLog.isDebugEnabled()) {
+            MyNameNode.stateChangeLog.debug(
                     "BLOCK* NameSystem.getAdditionalBlock: file "
                             +src+" for "+clientName);
         }

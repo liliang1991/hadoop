@@ -21,7 +21,6 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 public class FileJournalSet implements JournalManager {
     int minimumRedundantJournals;
     Log LOG = LogFactory.getLog(FileSystemEditLog.class);
-    private EditLogOutputStream stream;
     private boolean disabled = false;
     private  JournalManager journal;
 
@@ -70,13 +69,30 @@ public class FileJournalSet implements JournalManager {
     }
 
     @Override
-    public void finalizeLogSegment(long firstTxId, long lastTxId) throws IOException {
-
+    public void finalizeLogSegment(final long firstTxId, final long lastTxId) throws IOException {
+        mapJournalsAndReportErrors(new JournalClosure() {
+            @Override
+            public void apply(JournalAndStream jas) throws IOException {
+                if (jas.isActive()) {
+                    jas.closeStream();
+                    jas.getManager().finalizeLogSegment(firstTxId, lastTxId);
+                }
+            }
+        }, "finalize log segment " + firstTxId + ", " + lastTxId);
     }
 
     @Override
-    public void setOutputBufferCapacity(int size) {
-
+    public void setOutputBufferCapacity(final int size) {
+        try {
+            mapJournalsAndReportErrors(new JournalClosure() {
+                @Override
+                public void apply(JournalAndStream jas) throws IOException {
+                    jas.getManager().setOutputBufferCapacity(size);
+                }
+            }, "setOutputBufferCapacity");
+        } catch (IOException e) {
+            LOG.error("Error in setting outputbuffer capacity");
+        }
     }
 
     @Override
@@ -158,7 +174,14 @@ public class FileJournalSet implements JournalManager {
     public boolean hasSomeData() throws IOException {
         return false;
     }
-
+    private interface JournalClosure {
+        /**
+         * The operation on JournalAndStream.
+         * @param jas Object on which operations are performed.
+         * @throws IOException
+         */
+        public void apply(JournalAndStream jas) throws IOException;
+    }
     @Override
     public void purgeLogsOlderThan(long minTxIdToKeep) throws IOException {
 
@@ -182,6 +205,10 @@ public class FileJournalSet implements JournalManager {
                 new PriorityQueue<EditLogInputStream>(64,
                         EDIT_LOG_INPUT_STREAM_COMPARATOR);
         for (JournalAndStream jas : journals) {
+            if (jas.isDisabled()) {
+                LOG.info("Skipping jas " + jas + " since it's disabled");
+                continue;
+            }
             jas.getManager().selectInputStreams(allStreams, fromTxId, inProgressOk,
                     forReading);
         }
@@ -222,21 +249,21 @@ public class FileJournalSet implements JournalManager {
             acc.clear();
         }
     }
-    public interface JournalClosure {
-        /**
+/*    public interface JournalClosure {
+        *//**
          * The operation on JournalAndStream.
          * @param jas Object on which operations are performed.
          * @throws IOException
-         */
+         *//*
         public void apply(JournalAndStream jas) throws IOException;
-    }
+    }*/
     static class JournalAndStream implements CheckableNameNodeResource {
         private final JournalManager journal;
         private boolean disabled = false;
         private EditLogOutputStream stream;
         private boolean required = false;
 
-        public JournalAndStream(JournalManager manager, boolean required) {
+        JournalAndStream(JournalManager manager, boolean required) {
             this.journal = manager;
             this.required = required;
         }
@@ -298,7 +325,7 @@ public class FileJournalSet implements JournalManager {
             this.stream = stream;
         }
 
-        JournalManager getManager() {
+      public   JournalManager getManager() {
             return journal;
         }
 
@@ -320,6 +347,7 @@ public class FileJournalSet implements JournalManager {
             return required;
         }
     }
+
    public String getSyncTimes() {
         StringBuilder buf = new StringBuilder();
         for (JournalAndStream jas : journals) {

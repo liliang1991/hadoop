@@ -109,8 +109,8 @@ import com.google.common.base.Preconditions;
 public abstract class FSEditLogOp {
   public final FSEditLogOpCodes opCode;
   long txid;
-  byte[] rpcClientId = RpcConstants.DUMMY_CLIENT_ID;
-  int rpcCallId = RpcConstants.INVALID_CALL_ID;
+ public byte[] rpcClientId = RpcConstants.DUMMY_CLIENT_ID;
+public   int rpcCallId = RpcConstants.INVALID_CALL_ID;
 
   @SuppressWarnings("deprecation")
   final public static class OpInstanceCache {
@@ -217,7 +217,7 @@ public abstract class FSEditLogOp {
   public abstract void writeFields(DataOutputStream out)
       throws IOException;
 
-  static interface BlockListUpdatingOp {
+ public static interface BlockListUpdatingOp {
     Block[] getBlocks();
     String getPath();
     boolean shouldCompleteLastBlock();
@@ -264,30 +264,30 @@ public abstract class FSEditLogOp {
   }
   
   @SuppressWarnings("unchecked")
-  static abstract class AddCloseOp extends FSEditLogOp implements BlockListUpdatingOp {
-    int length;
-    long inodeId;
-    String path;
-    short replication;
-    long mtime;
-    long atime;
-    long blockSize;
-    Block[] blocks;
-    PermissionStatus permissions;
-    String clientName;
-    String clientMachine;
+ public static abstract class AddCloseOp extends FSEditLogOp implements BlockListUpdatingOp {
+    public  int length;
+  public   long inodeId;
+   public String path;
+   public short replication;
+    public   long mtime;
+    public  long atime;
+    public  long blockSize;
+   public Block[] blocks;
+    public   PermissionStatus permissions;
+   public String clientName;
+  public   String clientMachine;
     
     private AddCloseOp(FSEditLogOpCodes opCode) {
       super(opCode);
       assert(opCode == OP_ADD || opCode == OP_CLOSE);
     }
     
-    <T extends AddCloseOp> T setInodeId(long inodeId) {
+  public   <T extends AddCloseOp> T setInodeId(long inodeId) {
       this.inodeId = inodeId;
       return (T)this;
     }
 
-    <T extends AddCloseOp> T setPath(String path) {
+   public  <T extends AddCloseOp> T setPath(String path) {
       this.path = path;
       return (T)this;
     }
@@ -297,27 +297,27 @@ public abstract class FSEditLogOp {
       return path;
     }
 
-    <T extends AddCloseOp> T setReplication(short replication) {
+    public  <T extends AddCloseOp> T setReplication(short replication) {
       this.replication = replication;
       return (T)this;
     }
 
-    <T extends AddCloseOp> T setModificationTime(long mtime) {
+    public <T extends AddCloseOp> T setModificationTime(long mtime) {
       this.mtime = mtime;
       return (T)this;
     }
 
-    <T extends AddCloseOp> T setAccessTime(long atime) {
+    public   <T extends AddCloseOp> T setAccessTime(long atime) {
       this.atime = atime;
       return (T)this;
     }
 
-    <T extends AddCloseOp> T setBlockSize(long blockSize) {
+    public  <T extends AddCloseOp> T setBlockSize(long blockSize) {
       this.blockSize = blockSize;
       return (T)this;
     }
 
-    <T extends AddCloseOp> T setBlocks(Block[] blocks) {
+    public <T extends AddCloseOp> T setBlocks(Block[] blocks) {
       if (blocks.length > MAX_BLOCKS) {
         throw new RuntimeException("Can't have more than " + MAX_BLOCKS +
             " in an AddCloseOp.");
@@ -331,17 +331,17 @@ public abstract class FSEditLogOp {
       return blocks;
     }
 
-    <T extends AddCloseOp> T setPermissionStatus(PermissionStatus permissions) {
+    public  <T extends AddCloseOp> T setPermissionStatus(PermissionStatus permissions) {
       this.permissions = permissions;
       return (T)this;
     }
 
-    <T extends AddCloseOp> T setClientName(String clientName) {
+    public   <T extends AddCloseOp> T setClientName(String clientName) {
       this.clientName = clientName;
       return (T)this;
     }
 
-    <T extends AddCloseOp> T setClientMachine(String clientMachine) {
+    public  <T extends AddCloseOp> T setClientMachine(String clientMachine) {
       this.clientMachine = clientMachine;
       return (T)this;
     }
@@ -538,12 +538,12 @@ public abstract class FSEditLogOp {
    * {@literal @AtMostOnce} for {@link ClientProtocol#startFile} and
    * {@link ClientProtocol#appendFile}
    */
-  static class AddOp extends AddCloseOp {
+ public static class AddOp extends AddCloseOp {
     private AddOp() {
       super(OP_ADD);
     }
 
-    static AddOp getInstance(OpInstanceCache cache) {
+   public static AddOp getInstance(OpInstanceCache cache) {
       return (AddOp)cache.get(OP_ADD);
     }
 
@@ -566,12 +566,12 @@ public abstract class FSEditLogOp {
    * not need to record the rpc ids here since a successful appendFile op will
    * finally log an AddOp.
    */
-  static class CloseOp extends AddCloseOp {
+ public static class CloseOp extends AddCloseOp {
     private CloseOp() {
       super(OP_CLOSE);
     }
 
-    static CloseOp getInstance(OpInstanceCache cache) {
+   public static CloseOp getInstance(OpInstanceCache cache) {
       return (CloseOp)cache.get(OP_CLOSE);
     }
 
@@ -593,19 +593,19 @@ public abstract class FSEditLogOp {
    * {@literal @AtMostOnce} for {@link ClientProtocol#updatePipeline}, but 
    * {@literal @Idempotent} for some other ops.
    */
-  static class UpdateBlocksOp extends FSEditLogOp implements BlockListUpdatingOp {
-    String path;
-    Block[] blocks;
+public   static class UpdateBlocksOp extends FSEditLogOp implements BlockListUpdatingOp {
+   public String path;
+ public    Block[] blocks;
     
     private UpdateBlocksOp() {
       super(OP_UPDATE_BLOCKS);
     }
     
-    static UpdateBlocksOp getInstance(OpInstanceCache cache) {
+  public   static UpdateBlocksOp getInstance(OpInstanceCache cache) {
       return (UpdateBlocksOp)cache.get(OP_UPDATE_BLOCKS);
     }
     
-    UpdateBlocksOp setPath(String path) {
+ public    UpdateBlocksOp setPath(String path) {
       this.path = path;
       return this;
     }
@@ -615,7 +615,7 @@ public abstract class FSEditLogOp {
       return path;
     }
 
-    UpdateBlocksOp setBlocks(Block[] blocks) {
+   public UpdateBlocksOp setBlocks(Block[] blocks) {
       this.blocks = blocks;
       return this;
     }
@@ -680,24 +680,24 @@ public abstract class FSEditLogOp {
   }
 
   /** {@literal @Idempotent} for {@link ClientProtocol#setReplication} */
-  static class SetReplicationOp extends FSEditLogOp {
-    String path;
-    short replication;
+ public static class SetReplicationOp extends FSEditLogOp {
+  public   String path;
+   public short replication;
 
     private SetReplicationOp() {
       super(OP_SET_REPLICATION);
     }
 
-    static SetReplicationOp getInstance(OpInstanceCache cache) {
+  public   static SetReplicationOp getInstance(OpInstanceCache cache) {
       return (SetReplicationOp)cache.get(OP_SET_REPLICATION);
     }
 
-    SetReplicationOp setPath(String path) {
+  public   SetReplicationOp setPath(String path) {
       this.path = path;
       return this;
     }
 
-    SetReplicationOp setReplication(short replication) {
+   public SetReplicationOp setReplication(short replication) {
       this.replication = replication;
       return this;
     }
@@ -749,27 +749,27 @@ public abstract class FSEditLogOp {
   }
 
   /** {@literal @AtMostOnce} for {@link ClientProtocol#concat} */
-  static class ConcatDeleteOp extends FSEditLogOp {
-    int length;
-    String trg;
-    String[] srcs;
-    long timestamp;
+ public static class ConcatDeleteOp extends FSEditLogOp {
+      public int length;
+  public  String trg;
+      public String[] srcs;
+      public long timestamp;
     final static public int MAX_CONCAT_SRC = 1024 * 1024;
 
     private ConcatDeleteOp() {
       super(OP_CONCAT_DELETE);
     }
 
-    static ConcatDeleteOp getInstance(OpInstanceCache cache) {
+ public    static ConcatDeleteOp getInstance(OpInstanceCache cache) {
       return (ConcatDeleteOp)cache.get(OP_CONCAT_DELETE);
     }
 
-    ConcatDeleteOp setTarget(String trg) {
+ public    ConcatDeleteOp setTarget(String trg) {
       this.trg = trg;
       return this;
     }
 
-    ConcatDeleteOp setSources(String[] srcs) {
+ public    ConcatDeleteOp setSources(String[] srcs) {
       if (srcs.length > MAX_CONCAT_SRC) {
         throw new RuntimeException("ConcatDeleteOp can only have " +
             MAX_CONCAT_SRC + " sources at most.");
@@ -779,7 +779,7 @@ public abstract class FSEditLogOp {
       return this;
     }
 
-    ConcatDeleteOp setTimestamp(long timestamp) {
+  public   ConcatDeleteOp setTimestamp(long timestamp) {
       this.timestamp = timestamp;
       return this;
     }
@@ -897,31 +897,31 @@ public abstract class FSEditLogOp {
   }
 
   /** {@literal @AtMostOnce} for {@link ClientProtocol#rename} */
-  static class RenameOldOp extends FSEditLogOp {
-    int length;
-    String src;
-    String dst;
-    long timestamp;
+ public static class RenameOldOp extends FSEditLogOp {
+      public int length;
+      public String src;
+      public String dst;
+      public long timestamp;
 
     private RenameOldOp() {
       super(OP_RENAME_OLD);
     }
 
-    static RenameOldOp getInstance(OpInstanceCache cache) {
+  public   static RenameOldOp getInstance(OpInstanceCache cache) {
       return (RenameOldOp)cache.get(OP_RENAME_OLD);
     }
 
-    RenameOldOp setSource(String src) {
+   public RenameOldOp setSource(String src) {
       this.src = src;
       return this;
     }
 
-    RenameOldOp setDestination(String dst) {
+  public   RenameOldOp setDestination(String dst) {
       this.dst = dst;
       return this;
     }
 
-    RenameOldOp setTimestamp(long timestamp) {
+  public   RenameOldOp setTimestamp(long timestamp) {
       this.timestamp = timestamp;
       return this;
     }
@@ -1000,7 +1000,7 @@ public abstract class FSEditLogOp {
   }
 
   /** {@literal @AtMostOnce} for {@link ClientProtocol#delete} */
-  static class DeleteOp extends FSEditLogOp {
+ public static class DeleteOp extends FSEditLogOp {
     int length;
     String path;
     long timestamp;
@@ -1009,16 +1009,16 @@ public abstract class FSEditLogOp {
       super(OP_DELETE);
     }
 
-    static DeleteOp getInstance(OpInstanceCache cache) {
+   public static DeleteOp getInstance(OpInstanceCache cache) {
       return (DeleteOp)cache.get(OP_DELETE);
     }
 
-    DeleteOp setPath(String path) {
+      public  DeleteOp setPath(String path) {
       this.path = path;
       return this;
     }
 
-    DeleteOp setTimestamp(long timestamp) {
+      public  DeleteOp setTimestamp(long timestamp) {
       this.timestamp = timestamp;
       return this;
     }
@@ -1088,7 +1088,7 @@ public abstract class FSEditLogOp {
   }
 
   /** {@literal @Idempotent} for {@link ClientProtocol#mkdirs} */
-  static class MkdirOp extends FSEditLogOp {
+ public static class MkdirOp extends FSEditLogOp {
     int length;
     long inodeId;
     String path;
@@ -1099,33 +1099,32 @@ public abstract class FSEditLogOp {
       super(OP_MKDIR);
     }
     
-    static MkdirOp getInstance(OpInstanceCache cache) {
+  public   static MkdirOp getInstance(OpInstanceCache cache) {
       return (MkdirOp)cache.get(OP_MKDIR);
     }
 
-    MkdirOp setInodeId(long inodeId) {
+  public   MkdirOp setInodeId(long inodeId) {
       this.inodeId = inodeId;
       return this;
     }
     
-    MkdirOp setPath(String path) {
+  public   MkdirOp setPath(String path) {
       this.path = path;
       return this;
     }
 
-    MkdirOp setTimestamp(long timestamp) {
+  public   MkdirOp setTimestamp(long timestamp) {
       this.timestamp = timestamp;
       return this;
     }
 
-    MkdirOp setPermissionStatus(PermissionStatus permissions) {
+   public MkdirOp setPermissionStatus(PermissionStatus permissions) {
       this.permissions = permissions;
       return this;
     }
 
     @Override
-    public 
-    void writeFields(DataOutputStream out) throws IOException {
+    public void writeFields(DataOutputStream out) throws IOException {
       FSImageSerialization.writeLong(inodeId, out);
       FSImageSerialization.writeString(path, out);
       FSImageSerialization.writeLong(timestamp, out); // mtime
@@ -1220,18 +1219,18 @@ public abstract class FSEditLogOp {
    * already bound with other editlog op which records rpc ids (
    * {@link ClientProtocol#startFile}). Thus no need to record rpc ids here.
    */
-  static class SetGenstampV1Op extends FSEditLogOp {
+ public static class SetGenstampV1Op extends FSEditLogOp {
     long genStampV1;
 
     private SetGenstampV1Op() {
       super(OP_SET_GENSTAMP_V1);
     }
 
-    static SetGenstampV1Op getInstance(OpInstanceCache cache) {
+  public   static SetGenstampV1Op getInstance(OpInstanceCache cache) {
       return (SetGenstampV1Op)cache.get(OP_SET_GENSTAMP_V1);
     }
 
-    SetGenstampV1Op setGenerationStamp(long genStamp) {
+  public   SetGenstampV1Op setGenerationStamp(long genStamp) {
       this.genStampV1 = genStamp;
       return this;
     }
@@ -1273,18 +1272,18 @@ public abstract class FSEditLogOp {
   }
 
   /** Similar with {@link SetGenstampV1Op} */
-  static class SetGenstampV2Op extends FSEditLogOp {
+ public static class SetGenstampV2Op extends FSEditLogOp {
     long genStampV2;
 
     private SetGenstampV2Op() {
       super(OP_SET_GENSTAMP_V2);
     }
-
+public
     static SetGenstampV2Op getInstance(OpInstanceCache cache) {
       return (SetGenstampV2Op)cache.get(OP_SET_GENSTAMP_V2);
     }
 
-    SetGenstampV2Op setGenerationStamp(long genStamp) {
+  public   SetGenstampV2Op setGenerationStamp(long genStamp) {
       this.genStampV2 = genStamp;
       return this;
     }
@@ -1326,18 +1325,18 @@ public abstract class FSEditLogOp {
   }
 
   /** {@literal @Idempotent} for {@link ClientProtocol#addBlock} */
-  static class AllocateBlockIdOp extends FSEditLogOp {
+public   static class AllocateBlockIdOp extends FSEditLogOp {
     long blockId;
 
     private AllocateBlockIdOp() {
       super(OP_ALLOCATE_BLOCK_ID);
     }
 
-    static AllocateBlockIdOp getInstance(OpInstanceCache cache) {
+  public   static AllocateBlockIdOp getInstance(OpInstanceCache cache) {
       return (AllocateBlockIdOp)cache.get(OP_ALLOCATE_BLOCK_ID);
     }
 
-    AllocateBlockIdOp setBlockId(long blockId) {
+ public    AllocateBlockIdOp setBlockId(long blockId) {
       this.blockId = blockId;
       return this;
     }
@@ -1379,7 +1378,7 @@ public abstract class FSEditLogOp {
   }
 
   /** {@literal @Idempotent} for {@link ClientProtocol#setPermission} */
-  static class SetPermissionsOp extends FSEditLogOp {
+ public static class SetPermissionsOp extends FSEditLogOp {
     String src;
     FsPermission permissions;
 
@@ -1387,16 +1386,16 @@ public abstract class FSEditLogOp {
       super(OP_SET_PERMISSIONS);
     }
 
-    static SetPermissionsOp getInstance(OpInstanceCache cache) {
+   public static SetPermissionsOp getInstance(OpInstanceCache cache) {
       return (SetPermissionsOp)cache.get(OP_SET_PERMISSIONS);
     }
 
-    SetPermissionsOp setSource(String src) {
+   public SetPermissionsOp setSource(String src) {
       this.src = src;
       return this;
     }
 
-    SetPermissionsOp setPermissions(FsPermission permissions) {
+  public   SetPermissionsOp setPermissions(FsPermission permissions) {
       this.permissions = permissions;
       return this;
     }
@@ -1445,7 +1444,7 @@ public abstract class FSEditLogOp {
   }
 
   /** {@literal @Idempotent} for {@link ClientProtocol#setOwner} */
-  static class SetOwnerOp extends FSEditLogOp {
+public   static class SetOwnerOp extends FSEditLogOp {
     String src;
     String username;
     String groupname;
@@ -1454,21 +1453,21 @@ public abstract class FSEditLogOp {
       super(OP_SET_OWNER);
     }
 
-    static SetOwnerOp getInstance(OpInstanceCache cache) {
+  public   static SetOwnerOp getInstance(OpInstanceCache cache) {
       return (SetOwnerOp)cache.get(OP_SET_OWNER);
     }
 
-    SetOwnerOp setSource(String src) {
+  public   SetOwnerOp setSource(String src) {
       this.src = src;
       return this;
     }
 
-    SetOwnerOp setUser(String username) {
+   public SetOwnerOp setUser(String username) {
       this.username = username;
       return this;
     }
 
-    SetOwnerOp setGroup(String groupname) {
+  public   SetOwnerOp setGroup(String groupname) {
       this.groupname = groupname;
       return this;
     }
@@ -1626,7 +1625,7 @@ public abstract class FSEditLogOp {
   }
 
   /** {@literal @Idempotent} for {@link ClientProtocol#setQuota} */
-  static class SetQuotaOp extends FSEditLogOp {
+ public static class SetQuotaOp extends FSEditLogOp {
     String src;
     long nsQuota;
     long dsQuota;
@@ -1635,21 +1634,21 @@ public abstract class FSEditLogOp {
       super(OP_SET_QUOTA);
     }
 
-    static SetQuotaOp getInstance(OpInstanceCache cache) {
+  public   static SetQuotaOp getInstance(OpInstanceCache cache) {
       return (SetQuotaOp)cache.get(OP_SET_QUOTA);
     }
 
-    SetQuotaOp setSource(String src) {
+  public   SetQuotaOp setSource(String src) {
       this.src = src;
       return this;
     }
 
-    SetQuotaOp setNSQuota(long nsQuota) {
+   public SetQuotaOp setNSQuota(long nsQuota) {
       this.nsQuota = nsQuota;
       return this;
     }
 
-    SetQuotaOp setDSQuota(long dsQuota) {
+   public SetQuotaOp setDSQuota(long dsQuota) {
       this.dsQuota = dsQuota;
       return this;
     }
@@ -1704,7 +1703,7 @@ public abstract class FSEditLogOp {
   }
 
   /** {@literal @Idempotent} for {@link ClientProtocol#setTimes} */
-  static class TimesOp extends FSEditLogOp {
+ public static class TimesOp extends FSEditLogOp {
     int length;
     String path;
     long mtime;
@@ -1714,21 +1713,21 @@ public abstract class FSEditLogOp {
       super(OP_TIMES);
     }
 
-    static TimesOp getInstance(OpInstanceCache cache) {
+   public static TimesOp getInstance(OpInstanceCache cache) {
       return (TimesOp)cache.get(OP_TIMES);
     }
 
-    TimesOp setPath(String path) {
+  public   TimesOp setPath(String path) {
       this.path = path;
       return this;
     }
 
-    TimesOp setModificationTime(long mtime) {
+  public   TimesOp setModificationTime(long mtime) {
       this.mtime = mtime;
       return this;
     }
 
-    TimesOp setAccessTime(long atime) {
+  public   TimesOp setAccessTime(long atime) {
       this.atime = atime;
       return this;
     }
@@ -1800,7 +1799,7 @@ public abstract class FSEditLogOp {
   }
 
   /** {@literal @AtMostOnce} for {@link ClientProtocol#createSymlink} */
-  static class SymlinkOp extends FSEditLogOp {
+ public static class SymlinkOp extends FSEditLogOp {
     int length;
     long inodeId;
     String path;
@@ -1813,36 +1812,36 @@ public abstract class FSEditLogOp {
       super(OP_SYMLINK);
     }
 
-    static SymlinkOp getInstance(OpInstanceCache cache) {
+  public   static SymlinkOp getInstance(OpInstanceCache cache) {
       return (SymlinkOp)cache.get(OP_SYMLINK);
     }
 
-    SymlinkOp setId(long inodeId) {
+  public   SymlinkOp setId(long inodeId) {
       this.inodeId = inodeId;
       return this;
     }
     
-    SymlinkOp setPath(String path) {
+   public SymlinkOp setPath(String path) {
       this.path = path;
       return this;
     }
 
-    SymlinkOp setValue(String value) {
+ public    SymlinkOp setValue(String value) {
       this.value = value;
       return this;
     }
 
-    SymlinkOp setModificationTime(long mtime) {
+ public    SymlinkOp setModificationTime(long mtime) {
       this.mtime = mtime;
       return this;
     }
 
-    SymlinkOp setAccessTime(long atime) {
+public     SymlinkOp setAccessTime(long atime) {
       this.atime = atime;
       return this;
     }
 
-    SymlinkOp setPermissionStatus(PermissionStatus permissionStatus) {
+ public    SymlinkOp setPermissionStatus(PermissionStatus permissionStatus) {
       this.permissionStatus = permissionStatus;
       return this;
     }
@@ -1948,7 +1947,7 @@ public abstract class FSEditLogOp {
   }
 
   /** {@literal @AtMostOnce} for {@link ClientProtocol#rename2} */
-  static class RenameOp extends FSEditLogOp {
+ public static class RenameOp extends FSEditLogOp {
     int length;
     String src;
     String dst;
@@ -1959,26 +1958,26 @@ public abstract class FSEditLogOp {
       super(OP_RENAME);
     }
 
-    static RenameOp getInstance(OpInstanceCache cache) {
+   public static RenameOp getInstance(OpInstanceCache cache) {
       return (RenameOp)cache.get(OP_RENAME);
     }
 
-    RenameOp setSource(String src) {
+  public   RenameOp setSource(String src) {
       this.src = src;
       return this;
     }
 
-    RenameOp setDestination(String dst) {
+  public   RenameOp setDestination(String dst) {
       this.dst = dst;
       return this;
     }
     
-    RenameOp setTimestamp(long timestamp) {
+  public   RenameOp setTimestamp(long timestamp) {
       this.timestamp = timestamp;
       return this;
     }
     
-    RenameOp setOptions(Rename[] options) {
+   public RenameOp setOptions(Rename[] options) {
       this.options = options;
       return this;
     }
@@ -2105,7 +2104,7 @@ public abstract class FSEditLogOp {
    * meanwhile, startFile and appendFile both have their own corresponding
    * editlog op.
    */
-  static class ReassignLeaseOp extends FSEditLogOp {
+public   static class ReassignLeaseOp extends FSEditLogOp {
     String leaseHolder;
     String path;
     String newHolder;
@@ -2114,21 +2113,21 @@ public abstract class FSEditLogOp {
       super(OP_REASSIGN_LEASE);
     }
 
-    static ReassignLeaseOp getInstance(OpInstanceCache cache) {
+   public static ReassignLeaseOp getInstance(OpInstanceCache cache) {
       return (ReassignLeaseOp)cache.get(OP_REASSIGN_LEASE);
     }
 
-    ReassignLeaseOp setLeaseHolder(String leaseHolder) {
+  public   ReassignLeaseOp setLeaseHolder(String leaseHolder) {
       this.leaseHolder = leaseHolder;
       return this;
     }
 
-    ReassignLeaseOp setPath(String path) {
+   public ReassignLeaseOp setPath(String path) {
       this.path = path;
       return this;
     }
 
-    ReassignLeaseOp setNewHolder(String newHolder) {
+  public   ReassignLeaseOp setNewHolder(String newHolder) {
       this.newHolder = newHolder;
       return this;
     }
@@ -2181,7 +2180,7 @@ public abstract class FSEditLogOp {
   }
 
   /** {@literal @Idempotent} for {@link ClientProtocol#getDelegationToken} */
-  static class GetDelegationTokenOp extends FSEditLogOp {
+ public static class GetDelegationTokenOp extends FSEditLogOp {
     DelegationTokenIdentifier token;
     long expiryTime;
 
@@ -2189,17 +2188,17 @@ public abstract class FSEditLogOp {
       super(OP_GET_DELEGATION_TOKEN);
     }
 
-    static GetDelegationTokenOp getInstance(OpInstanceCache cache) {
+   public static GetDelegationTokenOp getInstance(OpInstanceCache cache) {
       return (GetDelegationTokenOp)cache.get(OP_GET_DELEGATION_TOKEN);
     }
 
-    GetDelegationTokenOp setDelegationTokenIdentifier(
+  public   GetDelegationTokenOp setDelegationTokenIdentifier(
         DelegationTokenIdentifier token) {
       this.token = token;
       return this;
     }
 
-    GetDelegationTokenOp setExpiryTime(long expiryTime) {
+  public   GetDelegationTokenOp setExpiryTime(long expiryTime) {
       this.expiryTime = expiryTime;
       return this;
     }
@@ -2253,7 +2252,7 @@ public abstract class FSEditLogOp {
   }
 
   /** {@literal @Idempotent} for {@link ClientProtocol#renewDelegationToken} */
-  static class RenewDelegationTokenOp extends FSEditLogOp {
+ public static class RenewDelegationTokenOp extends FSEditLogOp {
     DelegationTokenIdentifier token;
     long expiryTime;
 
@@ -2261,17 +2260,17 @@ public abstract class FSEditLogOp {
       super(OP_RENEW_DELEGATION_TOKEN);
     }
 
-    static RenewDelegationTokenOp getInstance(OpInstanceCache cache) {
+  public   static RenewDelegationTokenOp getInstance(OpInstanceCache cache) {
       return (RenewDelegationTokenOp)cache.get(OP_RENEW_DELEGATION_TOKEN);
     }
 
-    RenewDelegationTokenOp setDelegationTokenIdentifier(
+  public   RenewDelegationTokenOp setDelegationTokenIdentifier(
         DelegationTokenIdentifier token) {
       this.token = token;
       return this;
     }
 
-    RenewDelegationTokenOp setExpiryTime(long expiryTime) {
+  public   RenewDelegationTokenOp setExpiryTime(long expiryTime) {
       this.expiryTime = expiryTime;
       return this;
     }
@@ -2325,18 +2324,18 @@ public abstract class FSEditLogOp {
   }
 
   /** {@literal @Idempotent} for {@link ClientProtocol#cancelDelegationToken} */
-  static class CancelDelegationTokenOp extends FSEditLogOp {
+ public static class CancelDelegationTokenOp extends FSEditLogOp {
     DelegationTokenIdentifier token;
 
     private CancelDelegationTokenOp() {
       super(OP_CANCEL_DELEGATION_TOKEN);
     }
 
-    static CancelDelegationTokenOp getInstance(OpInstanceCache cache) {
+   public static CancelDelegationTokenOp getInstance(OpInstanceCache cache) {
       return (CancelDelegationTokenOp)cache.get(OP_CANCEL_DELEGATION_TOKEN);
     }
 
-    CancelDelegationTokenOp setDelegationTokenIdentifier(
+  public   CancelDelegationTokenOp setDelegationTokenIdentifier(
         DelegationTokenIdentifier token) {
       this.token = token;
       return this;
@@ -2432,14 +2431,14 @@ public abstract class FSEditLogOp {
     }
   }
   
-  static class LogSegmentOp extends FSEditLogOp {
+ public static class LogSegmentOp extends FSEditLogOp {
     private LogSegmentOp(FSEditLogOpCodes code) {
       super(code);
       assert code == OP_START_LOG_SEGMENT ||
              code == OP_END_LOG_SEGMENT : "Bad op: " + code;
     }
 
-    static LogSegmentOp getInstance(OpInstanceCache cache,
+  public   static LogSegmentOp getInstance(OpInstanceCache cache,
         FSEditLogOpCodes code) {
       return (LogSegmentOp)cache.get(code);
     }
@@ -2521,7 +2520,7 @@ public abstract class FSEditLogOp {
    * Operation corresponding to creating a snapshot.
    * {@literal @AtMostOnce} for {@link ClientProtocol#createSnapshot}.
    */
-  static class CreateSnapshotOp extends FSEditLogOp {
+ public static class CreateSnapshotOp extends FSEditLogOp {
     String snapshotRoot;
     String snapshotName;
     
@@ -2529,11 +2528,11 @@ public abstract class FSEditLogOp {
       super(OP_CREATE_SNAPSHOT);
     }
     
-    static CreateSnapshotOp getInstance(OpInstanceCache cache) {
+  public   static CreateSnapshotOp getInstance(OpInstanceCache cache) {
       return (CreateSnapshotOp)cache.get(OP_CREATE_SNAPSHOT);
     }
     
-    CreateSnapshotOp setSnapshotName(String snapName) {
+ public    CreateSnapshotOp setSnapshotName(String snapName) {
       this.snapshotName = snapName;
       return this;
     }
@@ -2591,7 +2590,7 @@ public abstract class FSEditLogOp {
    * Operation corresponding to delete a snapshot.
    * {@literal @AtMostOnce} for {@link ClientProtocol#deleteSnapshot}.
    */
-  static class DeleteSnapshotOp extends FSEditLogOp {
+ public static class DeleteSnapshotOp extends FSEditLogOp {
     String snapshotRoot;
     String snapshotName;
     
@@ -2599,16 +2598,16 @@ public abstract class FSEditLogOp {
       super(OP_DELETE_SNAPSHOT);
     }
     
-    static DeleteSnapshotOp getInstance(OpInstanceCache cache) {
+  public   static DeleteSnapshotOp getInstance(OpInstanceCache cache) {
       return (DeleteSnapshotOp)cache.get(OP_DELETE_SNAPSHOT);
     }
     
-    DeleteSnapshotOp setSnapshotName(String snapName) {
+   public DeleteSnapshotOp setSnapshotName(String snapName) {
       this.snapshotName = snapName;
       return this;
     }
 
-    DeleteSnapshotOp setSnapshotRoot(String snapRoot) {
+   public DeleteSnapshotOp setSnapshotRoot(String snapRoot) {
       snapshotRoot = snapRoot;
       return this;
     }
@@ -2661,7 +2660,7 @@ public abstract class FSEditLogOp {
    * Operation corresponding to rename a snapshot.
    * {@literal @AtMostOnce} for {@link ClientProtocol#renameSnapshot}.
    */
-  static class RenameSnapshotOp extends FSEditLogOp {
+ public static class RenameSnapshotOp extends FSEditLogOp {
     String snapshotRoot;
     String snapshotOldName;
     String snapshotNewName;
@@ -2670,21 +2669,21 @@ public abstract class FSEditLogOp {
       super(OP_RENAME_SNAPSHOT);
     }
     
-    static RenameSnapshotOp getInstance(OpInstanceCache cache) {
+  public   static RenameSnapshotOp getInstance(OpInstanceCache cache) {
       return (RenameSnapshotOp) cache.get(OP_RENAME_SNAPSHOT);
     }
     
-    RenameSnapshotOp setSnapshotOldName(String snapshotOldName) {
+  public   RenameSnapshotOp setSnapshotOldName(String snapshotOldName) {
       this.snapshotOldName = snapshotOldName;
       return this;
     }
 
-    RenameSnapshotOp setSnapshotNewName(String snapshotNewName) {
+   public RenameSnapshotOp setSnapshotNewName(String snapshotNewName) {
       this.snapshotNewName = snapshotNewName;
       return this;
     }
     
-    RenameSnapshotOp setSnapshotRoot(String snapshotRoot) {
+   public RenameSnapshotOp setSnapshotRoot(String snapshotRoot) {
       this.snapshotRoot = snapshotRoot;
       return this;
     }
@@ -2743,7 +2742,7 @@ public abstract class FSEditLogOp {
   /**
    * Operation corresponding to allow creating snapshot on a directory
    */
-  static class AllowSnapshotOp extends FSEditLogOp { // @Idempotent
+ public static class AllowSnapshotOp extends FSEditLogOp { // @Idempotent
     String snapshotRoot;
 
     public AllowSnapshotOp() {
@@ -2755,7 +2754,7 @@ public abstract class FSEditLogOp {
       snapshotRoot = snapRoot;
     }
 
-    static AllowSnapshotOp getInstance(OpInstanceCache cache) {
+  public   static AllowSnapshotOp getInstance(OpInstanceCache cache) {
       return (AllowSnapshotOp) cache.get(OP_ALLOW_SNAPSHOT);
     }
 
@@ -2797,8 +2796,8 @@ public abstract class FSEditLogOp {
   /**
    * Operation corresponding to disallow creating snapshot on a directory
    */
-  static class DisallowSnapshotOp extends FSEditLogOp { // @Idempotent
-    String snapshotRoot;
+ public static class DisallowSnapshotOp extends FSEditLogOp { // @Idempotent
+   public String snapshotRoot;
 
     public DisallowSnapshotOp() {
       super(OP_DISALLOW_SNAPSHOT);
@@ -2809,7 +2808,7 @@ public abstract class FSEditLogOp {
       snapshotRoot = snapRoot;
     }
 
-    static DisallowSnapshotOp getInstance(OpInstanceCache cache) {
+  public   static DisallowSnapshotOp getInstance(OpInstanceCache cache) {
       return (DisallowSnapshotOp) cache.get(OP_DISALLOW_SNAPSHOT);
     }
 

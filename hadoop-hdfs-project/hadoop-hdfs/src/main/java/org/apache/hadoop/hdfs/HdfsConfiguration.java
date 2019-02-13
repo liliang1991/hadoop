@@ -104,6 +104,8 @@ public class HdfsConfiguration extends Configuration {
     deprecate("io.bytes.per.checksum", DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY);
     deprecate("dfs.federation.nameservices", DFSConfigKeys.DFS_NAMESERVICES);
     deprecate("dfs.federation.nameservice.id", DFSConfigKeys.DFS_NAMESERVICE_ID);
+
+    deprecate("fs.default.name",DFSConfigKeys.FS_DEFAULT_NAME_KEY);
   }
 
   public static void main(String[] args) {

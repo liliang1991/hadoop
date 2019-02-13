@@ -32,43 +32,43 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-abstract class FSImageStorageInspector {
+public abstract class FSImageStorageInspector {
   /**
    * Inspect the contents of the given storage directory.
    */
-  abstract void inspectDirectory(StorageDirectory sd) throws IOException;
+ public abstract void inspectDirectory(StorageDirectory sd) throws IOException;
 
   /**
    * @return false if any of the storage directories have an unfinalized upgrade 
    */
-  abstract boolean isUpgradeFinalized();
+ public abstract boolean isUpgradeFinalized();
   
   /**
    * Get the image files which should be loaded into the filesystem.
    * @throws IOException if not enough files are available (eg no image found in any directory)
    */
-  abstract List<FSImageFile> getLatestImages() throws IOException;
+ public abstract List<FSImageFile> getLatestImages() throws IOException;
 
   /** 
    * Get the minimum tx id which should be loaded with this set of images.
    */
-  abstract long getMaxSeenTxId();
+  public abstract long getMaxSeenTxId();
 
   /**
    * @return true if the directories are in such a state that the image should be re-saved
    * following the load
    */
-  abstract boolean needToSave();
+public   abstract boolean needToSave();
 
   /**
    * Record of an image that has been located and had its filename parsed.
    */
-  static class FSImageFile {
-    final StorageDirectory sd;    
-    final long txId;
+ public static class FSImageFile {
+   public final StorageDirectory sd;
+   public final long txId;
     private final File file;
     
-    FSImageFile(StorageDirectory sd, File file, long txId) {
+   public FSImageFile(StorageDirectory sd, File file, long txId) {
       assert txId >= 0 || txId == HdfsConstants.INVALID_TXID 
         : "Invalid txid on " + file +": " + txId;
       
@@ -77,7 +77,7 @@ abstract class FSImageStorageInspector {
       this.file = file;
     } 
     
-    File getFile() {
+  public   File getFile() {
       return file;
     }
 

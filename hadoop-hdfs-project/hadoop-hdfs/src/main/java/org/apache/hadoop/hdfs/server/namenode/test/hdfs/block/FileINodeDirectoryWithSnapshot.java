@@ -1,35 +1,39 @@
 package org.apache.hadoop.hdfs.server.namenode.test.hdfs.block;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.*;
 import org.apache.hadoop.hdfs.util.Diff;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
+import static java.util.Arrays.asList;
+/*
+表示带有快照的目录,不能创建新的快照，只能将目录的变化记录到现有的快照里面
+ */
 public class FileINodeDirectoryWithSnapshot extends FileINodeDirectoryWithQuota {
     DirectoryDiffList diffs;
+
     public Snapshot getLastSnapshot() {
         return diffs.getLastSnapshot();
     }
+
     public FileINodeDirectoryWithSnapshot(FileINodeDirectory that) {
-        this(that, true, that instanceof FileINodeDirectoryWithSnapshot?
-                ((FileINodeDirectoryWithSnapshot)that).getDiffs(): null);
+        this(that, true, that instanceof FileINodeDirectoryWithSnapshot ?
+                ((FileINodeDirectoryWithSnapshot) that).getDiffs() : null);
     }
 
     FileINodeDirectoryWithSnapshot(FileINodeDirectory that, boolean adopt,
-                               DirectoryDiffList diffs) {
+                                   DirectoryDiffList diffs) {
         super(that, adopt, that.getNsQuota(), that.getDsQuota());
-        this.diffs = diffs != null? diffs: new DirectoryDiffList();
+        this.diffs = diffs != null ? diffs : new DirectoryDiffList();
     }
+
     public DirectoryDiffList getDiffs() {
         return diffs;
     }
@@ -75,10 +79,59 @@ public class FileINodeDirectoryWithSnapshot extends FileINodeDirectoryWithQuota 
         }
     }
 
+
+    /*    public boolean addChild(INode inode, boolean setModTime, Snapshot latest,
+                                final INodeMap inodeMap) throws QuotaExceededException {
+            ChildrenDiff diff = null;
+            Integer undoInfo = null;
+            if (isInLatestSnapshot(latest)) {
+                diff = diffs.checkAndAddLatestSnapshotDiff(latest, this).diff;
+                undoInfo = diff.create(inode);
+            }
+            final boolean added = super.addChild(inode, setModTime, null, inodeMap);
+            if (!added && undoInfo != null) {
+                diff.undoCreate(inode, undoInfo);
+            }
+            return added;
+        }*/
+    public void undoRename4ScrParent(final INodeReference oldChild,
+                                     final INode newChild, Snapshot latestSnapshot)
+            throws QuotaExceededException {
+        diffs. removeChild(Diff.ListType.DELETED, oldChild);
+        diffs.replaceChild(Diff.ListType.CREATED, oldChild, newChild);
+        // pass null for inodeMap since the parent node will not get replaced when
+        // undoing rename
+        addChild(newChild, true, null, null);
+    }
+
     public static class DirectoryDiff extends
             AbstractINodeDiff<FileINodeDirectory, FileINodeDirectoryAttributes, DirectoryDiff> {
         private final int childrenSize;
-         ChildrenDiff diff;
+        ChildrenDiff diff;
+
+
+        private boolean removeChild(final Diff.ListType type, final INode child) {
+            final List<DirectoryDiff> diffList = asList();
+            for (int i = diffList.size() - 1; i >= 0; i--) {
+                final ChildrenDiff diff = diffList.get(i).diff;
+                if (diff.removeChild(type, child)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public boolean replaceChild(final Diff.ListType type, final INode oldChild,
+                                    final INode newChild) {
+            final List<DirectoryDiff> diffList = asList();
+            for (int i = diffList.size() - 1; i >= 0; i--) {
+                final ChildrenDiff diff = diffList.get(i).diff;
+                if (diff.replace(type, oldChild, newChild)) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         public DirectoryDiff(Snapshot snapshot, FileINodeDirectory dir) {
             super(snapshot, null, null);
@@ -87,10 +140,12 @@ public class FileINodeDirectoryWithSnapshot extends FileINodeDirectoryWithQuota 
             this.diff = new ChildrenDiff();
         }
 
-        /** @return the child with the given name. */
-        public    INode getChild(byte[] name, boolean checkPosterior,
-                                 FileINodeDirectory currentDir) {
-            for(DirectoryDiff d = this; ; d = d.getPosterior()) {
+        /**
+         * @return the child with the given name.
+         */
+        public INode getChild(byte[] name, boolean checkPosterior,
+                              FileINodeDirectory currentDir) {
+            for (DirectoryDiff d = this; ; d = d.getPosterior()) {
                 final Diff.Container<INode> returned = d.diff.accessPrevious(name);
                 if (returned != null) {
                     // the diff is able to determine the inode
@@ -104,15 +159,17 @@ public class FileINodeDirectoryWithSnapshot extends FileINodeDirectoryWithQuota 
                 }
             }
         }
-      public   DirectoryDiff(Snapshot snapshot, FileINodeDirectoryAttributes snapshotINode,
-                      DirectoryDiff posteriorDiff, int childrenSize,
-                      List<INode> createdList, List<INode> deletedList) {
+
+        public DirectoryDiff(Snapshot snapshot, FileINodeDirectoryAttributes snapshotINode,
+                             DirectoryDiff posteriorDiff, int childrenSize,
+                             List<INode> createdList, List<INode> deletedList) {
             super(snapshot, snapshotINode, posteriorDiff);
             this.childrenSize = childrenSize;
             this.diff = new ChildrenDiff(createdList, deletedList);
         }
 
-    public     ChildrenDiff getChildrenDiff() {
+
+        public ChildrenDiff getChildrenDiff() {
             return diff;
         }
 
@@ -180,25 +237,8 @@ public class FileINodeDirectoryWithSnapshot extends FileINodeDirectoryWithQuota 
             };
         }
 
-        /**
-         * @return the child with the given name.
-         */
-        INode getChild(byte[] name, boolean checkPosterior,
-                       INodeDirectory currentDir) {
-            for (DirectoryDiff d = this; ; d = d.getPosterior()) {
-                final Diff.Container<INode> returned = d.diff.accessPrevious(name);
-                if (returned != null) {
-                    // the diff is able to determine the inode
-                    return returned.getElement();
-                } else if (!checkPosterior) {
-                    // Since checkPosterior is false, return null, i.e. not found.
-                    return null;
-                } else if (d.getPosterior() == null) {
-                    // no more posterior diff, get from current inode.
-                    return currentDir.getChild(name, null);
-                }
-            }
-        }
+
+
 
         @Override
         public String toString() {
@@ -236,12 +276,64 @@ public class FileINodeDirectoryWithSnapshot extends FileINodeDirectoryWithQuota 
         }
     }
 
+    public boolean computeDiffBetweenSnapshots(Snapshot fromSnapshot,
+                                               Snapshot toSnapshot, ChildrenDiff diff) {
+        Snapshot earlier = fromSnapshot;
+        Snapshot later = toSnapshot;
+        if (Snapshot.ID_COMPARATOR.compare(fromSnapshot, toSnapshot) > 0) {
+            earlier = toSnapshot;
+            later = fromSnapshot;
+        }
 
-  public   static class ChildrenDiff extends Diff<byte[], INode> {
+        boolean modified = diffs.changedBetweenSnapshots(earlier,
+                later);
+        if (!modified) {
+            return false;
+        }
+
+        final List<DirectoryDiff> difflist = diffs.asList();
+        final int size = difflist.size();
+        int earlierDiffIndex = Collections.binarySearch(difflist, earlier.getId());
+        int laterDiffIndex = later == null ? size : Collections
+                .binarySearch(difflist, later.getId());
+        earlierDiffIndex = earlierDiffIndex < 0 ? (-earlierDiffIndex - 1)
+                : earlierDiffIndex;
+        laterDiffIndex = laterDiffIndex < 0 ? (-laterDiffIndex - 1)
+                : laterDiffIndex;
+
+        boolean dirMetadataChanged = false;
+        FileINodeDirectoryAttributes dirCopy = null;
+        for (int i = earlierDiffIndex; i < laterDiffIndex; i++) {
+            DirectoryDiff sdiff = difflist.get(i);
+            diff.combinePosterior(sdiff.diff, null);
+            if (dirMetadataChanged == false && sdiff.snapshotINode != null) {
+                if (dirCopy == null) {
+                    dirCopy = sdiff.snapshotINode;
+                } else if (!dirCopy.metadataEquals(sdiff.snapshotINode)) {
+                    dirMetadataChanged = true;
+                }
+            }
+        }
+
+        if (!diff.isEmpty() || dirMetadataChanged) {
+            return true;
+        } else if (dirCopy != null) {
+            for (int i = laterDiffIndex; i < size; i++) {
+                if (!dirCopy.metadataEquals(difflist.get(i).snapshotINode)) {
+                    return true;
+                }
+            }
+            return !dirCopy.metadataEquals(this);
+        } else {
+            return false;
+        }
+    }
+
+    public static class ChildrenDiff extends Diff<byte[], INode> {
         ChildrenDiff() {
         }
 
-        private ChildrenDiff(final List<INode> created, final List<INode> deleted) {
+        public ChildrenDiff(final List<INode> created, final List<INode> deleted) {
             super(created, deleted);
         }
 
@@ -250,8 +342,8 @@ public class FileINodeDirectoryWithSnapshot extends FileINodeDirectoryWithQuota 
          *
          * @return true if the child is replaced; false if the child is not found.
          */
-        private final boolean replace(final ListType type,
-                                      final INode oldChild, final INode newChild) {
+        public final boolean replace(final ListType type,
+                                     final INode oldChild, final INode newChild) {
             final List<INode> list = getList(type);
             final int i = search(list, oldChild.getLocalNameBytes());
             if (i < 0) {
@@ -277,8 +369,8 @@ public class FileINodeDirectoryWithSnapshot extends FileINodeDirectoryWithQuota 
          * clear the created list
          */
         private Quota.Counts destroyCreatedList(
-                final INodeDirectoryWithSnapshot currentINode,
-                final BlocksMapUpdateInfo collectedBlocks,
+                final FileINodeDirectoryWithSnapshot currentINode,
+                final INode.BlocksMapUpdateInfo collectedBlocks,
                 final List<INode> removedINodes) {
             Quota.Counts counts = Quota.Counts.newInstance();
             final List<INode> createdList = getList(ListType.CREATED);
@@ -296,7 +388,7 @@ public class FileINodeDirectoryWithSnapshot extends FileINodeDirectoryWithQuota 
          * clear the deleted list
          */
         private Quota.Counts destroyDeletedList(
-                final BlocksMapUpdateInfo collectedBlocks,
+                final INode.BlocksMapUpdateInfo collectedBlocks,
                 final List<INode> removedINodes) {
             Quota.Counts counts = Quota.Counts.newInstance();
             final List<INode> deletedList = getList(ListType.DELETED);
@@ -359,7 +451,7 @@ public class FileINodeDirectoryWithSnapshot extends FileINodeDirectoryWithQuota 
          * @return A list of {@link SnapshotDiffReport.DiffReportEntry} as the diff report.
          */
         public List<SnapshotDiffReport.DiffReportEntry> generateReport(byte[][] parentPath,
-                                                                       INodeDirectoryWithSnapshot parent, boolean fromEarlier) {
+                                                                       FileINodeDirectoryWithSnapshot parent, boolean fromEarlier) {
             List<SnapshotDiffReport.DiffReportEntry> cList = new ArrayList<SnapshotDiffReport.DiffReportEntry>();
             List<SnapshotDiffReport.DiffReportEntry> dList = new ArrayList<SnapshotDiffReport.DiffReportEntry>();
             int c = 0, d = 0;
@@ -408,11 +500,12 @@ public class FileINodeDirectoryWithSnapshot extends FileINodeDirectoryWithQuota 
             return dList;
         }
     }
+
     @Override
     public Quota.Counts computeQuotaUsage4CurrentDirectory(Quota.Counts counts) {
         super.computeQuotaUsage4CurrentDirectory(counts);
-        for(DirectoryDiff d : diffs) {
-            for(INode deleted : d.getChildrenDiff().getList(Diff.ListType.DELETED)) {
+        for (DirectoryDiff d : diffs) {
+            for (INode deleted : d.getChildrenDiff().getList(Diff.ListType.DELETED)) {
                 deleted.computeQuotaUsage(counts, false, Snapshot.INVALID_ID);
             }
         }
@@ -421,68 +514,79 @@ public class FileINodeDirectoryWithSnapshot extends FileINodeDirectoryWithQuota 
     }
 
     public void getSnapshotDirectory(List<FileINodeDirectory> snapshotDir) {
-        for (FileINodeDirectoryWithSnapshot.DirectoryDiff sdiff : diffs) {
+        for (DirectoryDiff sdiff : diffs) {
             sdiff.getChildrenDiff().getDirsInDeleted(snapshotDir);
         }
     }
-
+    public void undoRename4DstParent(final INode deletedChild,
+                                     Snapshot latestSnapshot) throws QuotaExceededException {
+        boolean removeDeletedChild = diffs.removeChild(Diff.ListType.DELETED,
+                deletedChild);
+        // pass null for inodeMap since the parent node will not get replaced when
+        // undoing rename
+        final boolean added = addChild(deletedChild, true, removeDeletedChild ? null
+                : latestSnapshot, null);
+        // update quota usage if adding is successfully and the old child has not
+        // been stored in deleted list before
+        if (added && !removeDeletedChild) {
+            final Quota.Counts counts = deletedChild.computeQuotaUsage();
+            addSpaceConsumed(counts.get(Quota.NAMESPACE),
+                    counts.get(Quota.DISKSPACE), false);
+        }
+    }
     public FileINodeDirectoryWithSnapshot saveSelf2Snapshot(
             final Snapshot latest, final FileINodeDirectory snapshotCopy)
             throws QuotaExceededException {
         diffs.saveSelf2Snapshot(latest, this, snapshotCopy);
         return this;
     }
-
-    boolean computeDiffBetweenSnapshots(Snapshot fromSnapshot,
-                                        Snapshot toSnapshot, ChildrenDiff diff) {
-        Snapshot earlier = fromSnapshot;
-        Snapshot later = toSnapshot;
-        if (Snapshot.ID_COMPARATOR.compare(fromSnapshot, toSnapshot) > 0) {
-            earlier = toSnapshot;
-            later = fromSnapshot;
-        }
-
-        boolean modified = diffs.changedBetweenSnapshots(earlier,
-                later);
-        if (!modified) {
-            return false;
-        }
-
-        final List<DirectoryDiff> difflist = diffs.asList();
-        final int size = difflist.size();
-        int earlierDiffIndex = Collections.binarySearch(difflist, earlier.getId());
-        int laterDiffIndex = later == null ? size : Collections
-                .binarySearch(difflist, later.getId());
-        earlierDiffIndex = earlierDiffIndex < 0 ? (-earlierDiffIndex - 1)
-                : earlierDiffIndex;
-        laterDiffIndex = laterDiffIndex < 0 ? (-laterDiffIndex - 1)
-                : laterDiffIndex;
-
-        boolean dirMetadataChanged = false;
-        FileINodeDirectoryAttributes dirCopy = null;
-        for (int i = earlierDiffIndex; i < laterDiffIndex; i++) {
-            DirectoryDiff sdiff = difflist.get(i);
-            diff.combinePosterior(sdiff.diff, null);
-            if (dirMetadataChanged == false && sdiff.snapshotINode != null) {
-                if (dirCopy == null) {
-                    dirCopy = sdiff.snapshotINode;
-                } else if (!dirCopy.metadataEquals(sdiff.snapshotINode)) {
-                    dirMetadataChanged = true;
+    /**
+     * Destroy a subtree under a DstReference node.
+     */
+    public static void destroyDstSubtree(INode inode, final Snapshot snapshot,
+                                         final Snapshot prior, final BlocksMapUpdateInfo collectedBlocks,
+                                         final List<INode> removedINodes) throws QuotaExceededException {
+        Preconditions.checkArgument(prior != null);
+        if (inode.isReference()) {
+            if (inode instanceof INodeReference.WithName && snapshot != null) {
+                // this inode has been renamed before the deletion of the DstReference
+                // subtree
+                inode.cleanSubtree(snapshot, prior, collectedBlocks, removedINodes,
+                        true);
+            } else {
+                // for DstReference node, continue this process to its subtree
+                destroyDstSubtree(inode.asReference().getReferredINode(), snapshot,
+                        prior, collectedBlocks, removedINodes);
+            }
+        } else if (inode.isFile() && snapshot != null) {
+            inode.cleanSubtree(snapshot, prior, collectedBlocks, removedINodes, true);
+        } else if (inode.isDirectory()) {
+            Map<INode, INode> excludedNodes = null;
+            if (inode instanceof FileINodeDirectoryWithSnapshot) {
+                FileINodeDirectoryWithSnapshot sdir = (FileINodeDirectoryWithSnapshot) inode;
+                DirectoryDiffList diffList = sdir.getDiffs();
+                if (snapshot != null) {
+                    diffList.deleteSnapshotDiff(snapshot, prior, sdir, collectedBlocks,
+                            removedINodes, true);
+                }
+                DirectoryDiff priorDiff = diffList.getDiff(prior);
+                if (priorDiff != null && priorDiff.getSnapshot().equals(prior)) {
+                    priorDiff.diff.destroyCreatedList(sdir, collectedBlocks,
+                            removedINodes);
+                    List<INode> dList = priorDiff.diff.getList(Diff.ListType.DELETED);
+                    excludedNodes = new HashMap<INode, INode>(dList.size());
+                    for (INode dNode : dList) {
+                        excludedNodes.put(dNode, dNode);
+                    }
                 }
             }
-        }
-
-        if (!diff.isEmpty() || dirMetadataChanged) {
-            return true;
-        } else if (dirCopy != null) {
-            for (int i = laterDiffIndex; i < size; i++) {
-                if (!dirCopy.metadataEquals(difflist.get(i).snapshotINode)) {
-                    return true;
+            for (INode child : inode.asFileDirectory().getChildrenList(prior)) {
+                if (excludedNodes != null && excludedNodes.containsKey(child)) {
+                    continue;
                 }
+                destroyDstSubtree(child, snapshot, prior, collectedBlocks,
+                        removedINodes);
             }
-            return !dirCopy.metadataEquals(this);
-        } else {
-            return false;
         }
     }
 }

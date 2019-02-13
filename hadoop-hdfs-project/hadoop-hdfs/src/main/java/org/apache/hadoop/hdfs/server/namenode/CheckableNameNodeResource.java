@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * continue to operate as long as *any* redundant resource is available.
  */
 @InterfaceAudience.Private
-interface CheckableNameNodeResource {
+public interface CheckableNameNodeResource {
   
   /**
    * Is this resource currently available. 

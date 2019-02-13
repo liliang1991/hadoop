@@ -28,11 +28,11 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
  * A JournalManager implementation that uses RPCs to log transactions
  * to a BackupNode.
  */
-class BackupJournalManager implements JournalManager {
+public class BackupJournalManager implements JournalManager {
   private final NamenodeRegistration bnReg;
   private final JournalInfo journalInfo;
   
-  BackupJournalManager(NamenodeRegistration bnReg,
+  public BackupJournalManager(NamenodeRegistration bnReg,
       NamenodeRegistration nnReg) {
     journalInfo = new JournalInfo(nnReg.getLayoutVersion(),
         nnReg.getClusterID(), nnReg.getNamespaceID());

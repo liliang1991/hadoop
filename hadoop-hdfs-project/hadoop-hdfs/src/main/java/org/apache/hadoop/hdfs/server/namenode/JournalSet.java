@@ -472,7 +472,7 @@ public class JournalSet implements JournalManager {
     }
 
     @Override
-    protected void flushAndSync(final boolean durable) throws IOException {
+    public void flushAndSync(final boolean durable) throws IOException {
       mapJournalsAndReportErrors(new JournalClosure() {
         @Override
         public void apply(JournalAndStream jas) throws IOException {
@@ -506,7 +506,7 @@ public class JournalSet implements JournalManager {
     }
     
     @Override
-    protected long getNumSync() {
+    public long getNumSync() {
       for (JournalAndStream jas : journals) {
         if (jas.isActive()) {
           return jas.getCurrentStream().getNumSync();

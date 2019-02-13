@@ -737,7 +737,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
                         null, masked), createParent);
     }
 
-    @Override // ClientProtocol
+    @Override // ClientProtocolgetSnapshottableDirListing
     public void renewLease(String clientName) throws IOException {
         namesystem.renewLease(clientName);
     }

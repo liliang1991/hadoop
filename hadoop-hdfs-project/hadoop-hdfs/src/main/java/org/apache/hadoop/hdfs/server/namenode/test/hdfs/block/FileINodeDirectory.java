@@ -10,19 +10,19 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.*;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
-import org.apache.hadoop.util.LightWeightGSet;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public  class FileINodeDirectory extends INodeWithAdditionalFields
         implements FileINodeDirectoryAttributes {
    protected static final int DEFAULT_FILES_PER_DIRECTORY = 5;
-
+    static final String DUMPTREE_EXCEPT_LAST_ITEM = "+-";
+    static final String DUMPTREE_LAST_ITEM = "\\-";
    private List<INode> children = null;
+    public static byte[] ROOT_NAME = DFSUtil.string2Bytes("");
+
    public FileINodeDirectory(FileINodeDirectory other, boolean adopt) {
       super(other);
       this.children = other.children;
@@ -68,17 +68,62 @@ public  class FileINodeDirectory extends INodeWithAdditionalFields
 
    @Override
    public Quota.Counts cleanSubtree(Snapshot snapshot, Snapshot prior, BlocksMapUpdateInfo collectedBlocks, List<INode> removedFileINodes, boolean countDiffChange) throws QuotaExceededException {
-      return null;
+       if (prior == null && snapshot == null) {
+           // destroy the whole subtree and collect blocks that should be deleted
+           Quota.Counts counts = Quota.Counts.newInstance();
+           this.computeQuotaUsage(counts, true);
+           destroyAndCollectBlocks(collectedBlocks, removedFileINodes);
+           return counts;
+       } else {
+           // process recursively down the subtree
+           Quota.Counts counts = cleanSubtreeRecursively(snapshot, prior,
+                   collectedBlocks, removedFileINodes, null, countDiffChange);
+           if (isQuotaSet()) {
+               ((FileINodeDirectoryWithQuota) this).addSpaceConsumed2Cache(
+                       -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
+           }
+           return counts;
+       }
    }
-
+    public Quota.Counts cleanSubtreeRecursively(final Snapshot snapshot,
+                                                Snapshot prior, final BlocksMapUpdateInfo collectedBlocks,
+                                                final List<INode> removedINodes, final Map<INode, INode> excludedNodes,
+                                                final boolean countDiffChange) throws QuotaExceededException {
+        Quota.Counts counts = Quota.Counts.newInstance();
+        // in case of deletion snapshot, since this call happens after we modify
+        // the diff list, the snapshot to be deleted has been combined or renamed
+        // to its latest previous snapshot. (besides, we also need to consider nodes
+        // created after prior but before snapshot. this will be done in
+        // INodeDirectoryWithSnapshot#cleanSubtree)
+        Snapshot s = snapshot != null && prior != null ? prior : snapshot;
+        for (INode child : getChildrenList(s)) {
+            if (snapshot != null && excludedNodes != null
+                    && excludedNodes.containsKey(child)) {
+                continue;
+            } else {
+                Quota.Counts childCounts = child.cleanSubtree(snapshot, prior,
+                        collectedBlocks, removedINodes, countDiffChange);
+                counts.add(childCounts);
+            }
+        }
+        return counts;
+    }
    @Override
    public void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes) {
-
+       for (INode child : getChildrenList(null)) {
+           child.destroyAndCollectBlocks(collectedBlocks, removedINodes);
+       }
+       clear();
+       removedINodes.add(this);
    }
 
    @Override
    public Content.Counts computeContentSummary(Content.Counts counts) {
-      return null;
+       for (INode child : getChildrenList(null)) {
+           child.computeContentSummary(counts);
+       }
+       counts.add(Content.DIRECTORY, 1);
+       return counts;
    }
 
    @Override
@@ -93,61 +138,10 @@ public  class FileINodeDirectory extends INodeWithAdditionalFields
 
    @Override
    public boolean metadataEquals(FileINodeDirectoryAttributes other) {
-      return false;
-   }
-
-   public static byte[] ROOT_NAME = DFSUtil.string2Bytes("");
-
-   public FileINodeDirectory(INode parent, long id, byte[] name, long permission, long modificationTime, long accessTime) {
-      super(parent, id, name, permission, modificationTime, accessTime);
-   }
-
-   public FileINodeDirectory(long id, byte[] name, PermissionStatus permissions, long modificationTime, long accessTime) {
-      super(id, name, permissions, modificationTime, accessTime);
-   }
-
-   public FileINodeDirectory(INodeWithAdditionalFields other) {
-      super(other);
-   }
-
-   @Override
-   public void setNext(LightWeightGSet.LinkedElement next) {
-      super.setNext(next);
-   }
-
-   @Override
-   public LightWeightGSet.LinkedElement getNext() {
-      return super.getNext();
-   }
-
-   @Override
-   public long getPermissionLong() {
-      return super.getPermissionLong();
-   }
-
-   @Override
-   public INodeAttributes getSnapshotINode(Snapshot snapshot) {
-      return super.getSnapshotINode(snapshot);
-   }
-
-   @Override
-   public boolean isReference() {
-      return super.isReference();
-   }
-
-   @Override
-   public INodeReference asReference() {
-      return super.asReference();
-   }
-
-   @Override
-   public boolean isFile() {
-      return super.isFile();
-   }
-
-   @Override
-   public INodeFile asFile() {
-      return super.asFile();
+       return other != null
+               && getNsQuota() == other.getNsQuota()
+               && getDsQuota() == other.getDsQuota()
+               && getPermissionLong() == other.getPermissionLong();
    }
 
    @Override
@@ -161,71 +155,78 @@ public  class FileINodeDirectory extends INodeWithAdditionalFields
    }
 
    @Override
-   public boolean isSymlink() {
-      return super.isSymlink();
-   }
-
-   @Override
-   public INodeSymlink asSymlink() {
-      return super.asSymlink();
-   }
-
-   @Override
-   public void addSpaceConsumed(long nsDelta, long dsDelta, boolean verify) throws QuotaExceededException {
-      super.addSpaceConsumed(nsDelta, dsDelta, verify);
-   }
-
-
-
-   @Override
-   public long getDsQuota() {
-      return super.getDsQuota();
-   }
-
-   @Override
-   public String getFullPathName() {
-      return super.getFullPathName();
-   }
-
-   @Override
-   public String toString() {
-      return super.toString();
-   }
-
-   @Override
-   public String toDetailString() {
-      return super.toDetailString();
-   }
-
-   @Override
-   public INodeReference getParentReference() {
-      return super.getParentReference();
-   }
-
-   @Override
    public void clear() {
-      super.clear();
+       super.clear();
+       clearChildren();
    }
 
-   @Override
-   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix, Snapshot snapshot) {
-      super.dumpTreeRecursively(out, prefix, snapshot);
-   }
+    public void clearChildren() {
+        this.children = null;
+    }
 
    @Override
-   protected Object clone() throws CloneNotSupportedException {
-      return super.clone();
-   }
+   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,final Snapshot snapshot) {
+       super.dumpTreeRecursively(out, prefix, snapshot);
+       out.print(", childrenSize=" + getChildrenList(snapshot).size());
+       if (this instanceof FileINodeDirectoryWithQuota) {
+           out.print(((FileINodeDirectoryWithQuota)this).quotaString());
+       }
+       if (this instanceof Snapshot.FileRoot) {
+           out.print(", snapshotId=" + snapshot.getId());
+       }
+       out.println();
 
-   @Override
-   protected void finalize() throws Throwable {
-      super.finalize();
+       if (prefix.length() >= 2) {
+           prefix.setLength(prefix.length() - 2);
+           prefix.append("  ");
+       }
+       dumpTreeRecursively(out, prefix, new Iterable<SnapshotAndINode>() {
+           Iterator<INode> i = getChildrenList(snapshot).iterator();
+
+           @Override
+           public Iterator<SnapshotAndINode> iterator() {
+               return new Iterator<SnapshotAndINode>() {
+                   @Override
+                   public boolean hasNext() {
+                       return i.hasNext();
+                   }
+
+                   @Override
+                   public SnapshotAndINode next() {
+                       return new SnapshotAndINode(snapshot, i.next());
+                   }
+
+                   @Override
+                   public void remove() {
+                       throw new UnsupportedOperationException();
+                   }
+               };
+           }
+       });
    }
-   @Override
-   public FileINodeDirectory recordModification(Snapshot latest,
-                                            final INodeMap inodeMap) throws QuotaExceededException {
-      return null;
-   }
+    protected static void dumpTreeRecursively(PrintWriter out,
+                                              StringBuilder prefix, Iterable<SnapshotAndINode> subs) {
+        if (subs != null) {
+            for(final Iterator<SnapshotAndINode> i = subs.iterator(); i.hasNext();) {
+                final SnapshotAndINode pair = i.next();
+                prefix.append(i.hasNext()? DUMPTREE_EXCEPT_LAST_ITEM: DUMPTREE_LAST_ITEM);
+                pair.inode.dumpTreeRecursively(out, prefix, pair.snapshot);
+                prefix.setLength(prefix.length() - 2);
+            }
+        }
+    }
+
+    @Override
+    public FileINodeDirectory  recordFileModification(Snapshot latest,
+                                                 final FileINodeMap inodeMap) throws QuotaExceededException {
+        if (isInLatestSnapshot(latest)) {
+            return replaceSelf4INodeDirectoryWithSnapshot(inodeMap).
+                    recordFileModification(latest, inodeMap);
+        } else {
+            return this;
+
+        }
+    }
  public   FileINodesInPath getLastINodeInPath(String path, boolean resolveLink
    ) throws UnresolvedLinkException {
       return FileINodesInPath.resolve(this, getPathComponents(path), 1, resolveLink);
@@ -464,5 +465,18 @@ public  class FileINodeDirectory extends INodeWithAdditionalFields
         final FileINodeDirectorySnapshottable s = new FileINodeDirectorySnapshottable(this);
         replaceSelf(s, inodeMap).saveSelf2Snapshot(latest, this);
         return s;
+    }
+    public static class SnapshotAndINode {
+        public final Snapshot snapshot;
+        public final INode inode;
+
+        public SnapshotAndINode(Snapshot snapshot, INode inode) {
+            this.snapshot = snapshot;
+            this.inode = inode;
+        }
+
+        public SnapshotAndINode(Snapshot snapshot) {
+            this(snapshot, snapshot.getRoot());
+        }
     }
 }

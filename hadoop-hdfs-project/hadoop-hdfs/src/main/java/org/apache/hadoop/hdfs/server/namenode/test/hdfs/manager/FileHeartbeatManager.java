@@ -14,7 +14,10 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 
 import java.util.*;
-
+/*
+心跳管理器主要用于管理DataNode的心跳，如果某DataNode在一段时间内（10分30秒）停止与NameNode发生心跳，
+则会将该DataNode直接标记为死亡节点，而不是先退役，
+ */
 public class FileHeartbeatManager implements DatanodeStatistics {
     private final List<DatanodeDescriptor> datanodes = new ArrayList<DatanodeDescriptor>();
     private final Daemon heartbeatThread = new Daemon(new Monitor());

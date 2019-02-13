@@ -9,10 +9,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
-import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import java.util.Arrays;
@@ -30,13 +26,17 @@ public class FileINodesInPath {
 
     boolean isSnapshot;
     private Snapshot snapshot = null;
-  public   boolean isSnapshot() {
+    private int snapshotRootIndex;
+    int getSnapshotRootIndex() {
+        return this.snapshotRootIndex;
+    }
+
+    public   boolean isSnapshot() {
         return this.isSnapshot;
     }
   public   byte[] getLastLocalName() {
         return path[path.length - 1];
     }
-    private int snapshotRootIndex;
     private FileINodesInPath(byte[][] path, int number) {
         this.path = path;
         assert (number >= 0);
@@ -107,12 +107,12 @@ public class FileINodesInPath {
             }
             final boolean isRef = curNode.isReference();
             final boolean isDir = curNode.isDirectory();
-            final INodeDirectory dir = isDir? curNode.asDirectory(): null;
-            if (!isRef && isDir && dir instanceof INodeDirectoryWithSnapshot) {
+            final FileINodeDirectory dir = isDir? curNode.asFileDirectory(): null;
+            if (!isRef && isDir && dir instanceof FileINodeDirectoryWithSnapshot) {
                 //if the path is a non-snapshot path, update the latest snapshot.
                 if (!existing.isSnapshot()) {
                     existing.updateLatestSnapshot(
-                            ((INodeDirectoryWithSnapshot)dir).getLastSnapshot());
+                            ((FileINodeDirectoryWithSnapshot)dir).getLastSnapshot());
                 }
             } else if (isRef && isDir && !lastComp) {
                 // If the curNode is a reference node, need to check its dstSnapshot:
@@ -132,9 +132,9 @@ public class FileINodesInPath {
                             dstSnapshotId >= latest.getId()) { // the above scenario
                         Snapshot lastSnapshot = null;
                         if (curNode.isDirectory()
-                                && curNode.asDirectory() instanceof INodeDirectoryWithSnapshot) {
-                            lastSnapshot = ((INodeDirectoryWithSnapshot) curNode
-                                    .asDirectory()).getLastSnapshot();
+                                && curNode.asFileDirectory() instanceof FileINodeDirectoryWithSnapshot) {
+                            lastSnapshot = ((FileINodeDirectoryWithSnapshot) curNode
+                                    .asFileDirectory()).getLastSnapshot();
                         }
                         existing.setSnapshot(lastSnapshot);
                     }
@@ -162,7 +162,7 @@ public class FileINodesInPath {
 
             // check if the next byte[] in components is for ".snapshot"
             if (isDotSnapshotDir(childName)
-                    && isDir && dir instanceof INodeDirectorySnapshottable) {
+                    && isDir && dir instanceof FileINodeDirectorySnapshottable) {
                 // skip the ".snapshot" in components
                 count++;
                 index++;
@@ -175,7 +175,7 @@ public class FileINodesInPath {
                     break;
                 }
                 // Resolve snapshot root
-                final Snapshot s = ((INodeDirectorySnapshottable)dir).getSnapshot(
+                final Snapshot s = ((FileINodeDirectorySnapshottable)dir).getSnapshot(
                         components[count + 1]);
                 if (s == null) {
                     //snapshot not found

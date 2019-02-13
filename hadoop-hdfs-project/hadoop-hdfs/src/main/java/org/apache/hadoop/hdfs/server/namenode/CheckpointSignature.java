@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 
 import com.google.common.collect.ComparisonChain;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.FileSystenImage;
 
 /**
  * A unique signature intended to identify checkpoint transactions.
@@ -45,7 +46,13 @@ public class CheckpointSignature extends StorageInfo
     mostRecentCheckpointTxId = fsImage.getStorage().getMostRecentCheckpointTxId();
     curSegmentTxId = fsImage.getEditLog().getCurSegmentTxId();
   }
+  public CheckpointSignature(FileSystenImage fsImage) {
+    super(fsImage.getStorage());
+    blockpoolID = fsImage.getBlockPoolID();
 
+    mostRecentCheckpointTxId = fsImage.getStorage().getMostRecentCheckpointTxId();
+    curSegmentTxId = fsImage.getEditLog().getCurSegmentTxId();
+  }
   CheckpointSignature(String str) {
     String[] fields = str.split(FIELD_SEPARATOR);
     assert fields.length == NUM_FIELDS :
@@ -123,11 +130,16 @@ public class CheckpointSignature extends StorageInfo
       blockpoolID.equals(si.getBlockPoolID());
   }
 
+  boolean isSameCluster(FileSystenImage si) {
+    return namespaceID == si.getStorage().namespaceID &&
+            clusterID.equals(si.getClusterID()) &&
+            blockpoolID.equals(si.getBlockPoolID());
+  }
   boolean namespaceIdMatches(FSImage si) {
     return namespaceID == si.getStorage().namespaceID;
   }
 
-  void validateStorageInfo(FSImage si) throws IOException {
+ public void validateStorageInfo(FSImage si) throws IOException {
     if (!isSameCluster(si)
         || !storageVersionMatches(si.getStorage())) {
       throw new IOException("Inconsistent checkpoint fields.\n"
@@ -142,7 +154,21 @@ public class CheckpointSignature extends StorageInfo
           + si.getBlockPoolID() + ".");
     }
   }
-
+  public void validateStorageInfo(FileSystenImage si) throws IOException {
+    if (!isSameCluster(si)
+            || !storageVersionMatches(si.getStorage())) {
+      throw new IOException("Inconsistent checkpoint fields.\n"
+              + "LV = " + layoutVersion + " namespaceID = " + namespaceID
+              + " cTime = " + cTime
+              + " ; clusterId = " + clusterID
+              + " ; blockpoolId = " + blockpoolID
+              + ".\nExpecting respectively: "
+              + si.getStorage().layoutVersion + "; "
+              + si.getStorage().namespaceID + "; " + si.getStorage().cTime
+              + "; " + si.getClusterID() + "; "
+              + si.getBlockPoolID() + ".");
+    }
+  }
   //
   // Comparable interface
   //

@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * whether sufficient resources are available for the NN to continue operating.
  */
 @InterfaceAudience.Private
-final class NameNodeResourcePolicy {
+public final class NameNodeResourcePolicy {
 
   /**
    * Return true if and only if there are sufficient NN
@@ -38,7 +38,7 @@ final class NameNodeResourcePolicy {
    * @return true if and only if there are sufficient NN resources to
    *         continue logging edits.
    */
-  static boolean areResourcesAvailable(
+  public static boolean areResourcesAvailable(
       Collection<? extends CheckableNameNodeResource> resources,
       int minimumRedundantResources) {
 

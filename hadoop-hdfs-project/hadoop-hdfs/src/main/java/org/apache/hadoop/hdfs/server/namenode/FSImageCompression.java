@@ -39,7 +39,7 @@ import org.apache.hadoop.io.compress.CompressionCodecFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-class FSImageCompression {
+public class FSImageCompression {
 
   /** Codec to use to save or load image, or null if the image is not compressed */
   private CompressionCodec imageCodec;
@@ -60,7 +60,7 @@ class FSImageCompression {
   /**
    * Create a "noop" compression - i.e. uncompressed
    */
-  static FSImageCompression createNoopCompression() {
+ public static FSImageCompression createNoopCompression() {
     return new FSImageCompression();
   }
 
@@ -69,7 +69,7 @@ class FSImageCompression {
    * Configuration object.
    * @throws IOException if the specified codec is not available.
    */
-  static FSImageCompression createCompression(Configuration conf)
+  public static FSImageCompression createCompression(Configuration conf)
     throws IOException {
     boolean compressImage = conf.getBoolean(
       DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY,
@@ -107,7 +107,7 @@ class FSImageCompression {
    * @throws IOException if the specified codec is not available or the
    * underlying IO fails.
    */
-  static FSImageCompression readCompressionHeader(
+ public static FSImageCompression readCompressionHeader(
     Configuration conf, DataInput in) throws IOException
   {
     boolean isCompressed = in.readBoolean();
@@ -128,7 +128,7 @@ class FSImageCompression {
    * @throws IOException If the decompressor cannot be instantiated or an IO
    * error occurs.
    */
-  DataInputStream unwrapInputStream(InputStream is) throws IOException {
+  public DataInputStream unwrapInputStream(InputStream is) throws IOException {
     if (imageCodec != null) {
       return new DataInputStream(imageCodec.createInputStream(is));
     } else {
@@ -149,7 +149,7 @@ class FSImageCompression {
    * @throws IOException if an IO error occurs or the compressor cannot be
    * instantiated
    */
-  DataOutputStream writeHeaderAndWrapStream(OutputStream os)
+public   DataOutputStream writeHeaderAndWrapStream(OutputStream os)
   throws IOException {
     DataOutputStream dos = new DataOutputStream(os);
 

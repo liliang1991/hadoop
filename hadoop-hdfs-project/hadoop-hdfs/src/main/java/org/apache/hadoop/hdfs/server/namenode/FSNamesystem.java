@@ -358,7 +358,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   // Block pool ID used by this namenode
   private String blockPoolId;
   //租约管理器
-  final LeaseManager leaseManager = new LeaseManager(this); 
+public  final LeaseManager leaseManager = new LeaseManager(this);
 
   volatile Daemon smmthread = null;  // SafeModeMonitor thread
   
@@ -882,7 +882,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Start services required in active state
    * @throws IOException
    */
-  void startActiveServices() throws IOException {
+public   void startActiveServices() throws IOException {
     LOG.info("Starting services required for active state");
     writeLock();
     try {
@@ -945,11 +945,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       alwaysUseDelegationTokensForTests;
   }
 
-  /** 
+  /**
    * Stop services required in active state
    * @throws InterruptedException
    */
-  void stopActiveServices() {
+  public void stopActiveServices() {
     LOG.info("Stopping services started for active state");
     writeLock();
     try {
@@ -979,7 +979,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * 
    * @throws IOException
    */
-  void startStandbyServices(final Configuration conf) throws IOException {
+ public void startStandbyServices(final Configuration conf) throws IOException {
     LOG.info("Starting services required for standby state");
     if (!dir.fsImage.editLog.isOpenForRead()) {
       // During startup, we're already open for read.
@@ -1002,7 +1002,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * asked to enter Active state. This cancels any checkpoints
    * currently being taken.
    */
-  void prepareToStopStandbyServices() throws ServiceFailedException {
+ public void prepareToStopStandbyServices() throws ServiceFailedException {
     if (standbyCheckpointer != null) {
       standbyCheckpointer.cancelAndPreventCheckpoints(
           "About to leave standby state");
@@ -1010,7 +1010,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /** Stop services required in standby state */
-  void stopStandbyServices() throws IOException {
+  public void stopStandbyServices() throws IOException {
     LOG.info("Stopping services started for standby state");
     if (standbyCheckpointer != null) {
       standbyCheckpointer.stop();
@@ -2214,44 +2214,44 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   boolean recoverLease(String src, String holder, String clientMachine)
       throws IOException {
-    if (!DFSUtil.isValidName(src)) {
-      throw new IOException("Invalid file name: " + src);
+        if (!DFSUtil.isValidName(src)) {
+            throw new IOException("Invalid file name: " + src);
+        }
+
+        boolean skipSync = false;
+        FSPermissionChecker pc = getPermissionChecker();
+        checkOperation(OperationCategory.WRITE);
+        byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
+        writeLock();
+        try {
+            checkOperation(OperationCategory.WRITE);
+            if (isInSafeMode()) {
+                throw new SafeModeException(
+                        "Cannot recover the lease of " + src, safeMode);
+            }
+            src = FSDirectory.resolvePath(src, pathComponents, dir);
+            final INodeFile inode = INodeFile.valueOf(dir.getINode(src), src);
+            if (!inode.isUnderConstruction()) {
+                return true;
+            }
+            if (isPermissionEnabled) {
+                checkPathAccess(pc, src, FsAction.WRITE);
+            }
+
+            recoverLeaseInternal(inode, src, holder, clientMachine, true);
+        } catch (StandbyException se) {
+            skipSync = true;
+            throw se;
+        } finally {
+            writeUnlock();
+            // There might be transactions logged while trying to recover the lease.
+            // They need to be sync'ed even when an exception was thrown.
+            if (!skipSync) {
+                getEditLog().logSync();
+            }
+        }
+        return false;
     }
-  
-    boolean skipSync = false;
-    FSPermissionChecker pc = getPermissionChecker();
-    checkOperation(OperationCategory.WRITE);
-    byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
-    writeLock();
-    try {
-      checkOperation(OperationCategory.WRITE);
-      if (isInSafeMode()) {
-        throw new SafeModeException(
-            "Cannot recover the lease of " + src, safeMode);
-      }
-      src = FSDirectory.resolvePath(src, pathComponents, dir);
-      final INodeFile inode = INodeFile.valueOf(dir.getINode(src), src);
-      if (!inode.isUnderConstruction()) {
-        return true;
-      }
-      if (isPermissionEnabled) {
-        checkPathAccess(pc, src, FsAction.WRITE);
-      }
-  
-      recoverLeaseInternal(inode, src, holder, clientMachine, true);
-    } catch (StandbyException se) {
-      skipSync = true;
-      throw se;
-    } finally {
-      writeUnlock();
-      // There might be transactions logged while trying to recover the lease.
-      // They need to be sync'ed even when an exception was thrown.
-      if (!skipSync) {
-        getEditLog().logSync();
-      }
-    }
-    return false;
-  }
 
   private void recoverLeaseInternal(INodeFile fileInode, 
       String src, String holder, String clientMachine, boolean force)
@@ -4771,7 +4771,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * This thread starts when the threshold level is reached.
    *
    */
-  class SafeModeMonitor implements Runnable {
+ public class SafeModeMonitor implements Runnable {
     /** interval in msec for checking safe mode: {@value} */
     private static final long recheckInterval = 1000;
       
@@ -5758,7 +5758,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  static class CorruptFileBlockInfo {
+ public static class CorruptFileBlockInfo {
     String path;
     Block block;
     

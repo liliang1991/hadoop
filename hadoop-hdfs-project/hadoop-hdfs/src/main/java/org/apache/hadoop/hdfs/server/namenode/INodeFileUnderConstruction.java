@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructio
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeMap;
 
 /**
  * I-node for file being written.
@@ -54,7 +55,7 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
   private final String clientMachine;
   private final DatanodeDescriptor clientNode; // if client is a cluster node too.
   
-  INodeFileUnderConstruction(long id,
+  public INodeFileUnderConstruction(long id,
                              PermissionStatus permissions,
                              short replication,
                              long preferredBlockSize,
@@ -66,7 +67,7 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
         permissions, clientName, clientMachine, clientNode);
   }
 
-  INodeFileUnderConstruction(long id,
+  public INodeFileUnderConstruction(long id,
                              byte[] name,
                              short blockReplication,
                              long modificationTime,
@@ -97,7 +98,7 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
     return clientName;
   }
 
-  void setClientName(String clientName) {
+  public void setClientName(String clientName) {
     this.clientName = clientName;
   }
 
@@ -120,13 +121,13 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
    * The original modification time is used as the access time.
    * The new modification is the specified mtime.
    */
-  protected INodeFile toINodeFile(long mtime) {
+  public INodeFile toINodeFile(long mtime) {
     assertAllBlocksComplete();
 
     final INodeFile f = new INodeFile(getId(), getLocalNameBytes(),
         getPermissionStatus(), mtime, getModificationTime(),
         getBlocks(), getFileReplication(), getPreferredBlockSize());
-    f.setParent(getParent());
+    f.setFileParent(getFileParent());
     return f;
   }
   
@@ -142,7 +143,18 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
       return this;
     }
   }
-
+  @Override
+  public INodeFileUnderConstruction recordFileModification(final Snapshot latest,
+                                                       final FileINodeMap inodeMap) throws QuotaExceededException {
+    if (isInLatestSnapshot(latest)) {
+      INodeFileUnderConstructionWithSnapshot newFile = getFileParent()
+              .replaceChild4INodeFileUcWithSnapshot(this, inodeMap)
+              .recordFileModification(latest, inodeMap);
+      return newFile;
+    } else {
+      return this;
+    }
+  }
   /** Assert all blocks are complete. */
   protected void assertAllBlocksComplete() {
     final BlockInfo[] blocks = getBlocks();
@@ -157,7 +169,7 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
    * Remove a block from the block list. This block should be
    * the last one on the list.
    */
-  boolean removeLastBlock(Block oldblock) throws IOException {
+  public boolean removeLastBlock(Block oldblock) throws IOException {
     final BlockInfo[] blocks = getBlocks();
     if (blocks == null || blocks.length == 0) {
       return false;
@@ -199,7 +211,7 @@ public class INodeFileUnderConstruction extends INodeFile implements MutableBloc
    *          The length of the last block reported from client
    * @throws IOException
    */
-  void updateLengthOfLastBlock(long lastBlockLength) throws IOException {
+ public void updateLengthOfLastBlock(long lastBlockLength) throws IOException {
     BlockInfo lastBlock = this.getLastBlock();
     assert (lastBlock != null) : "The last block for path "
         + this.getFullPathName() + " is null when updating its length";

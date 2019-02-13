@@ -38,6 +38,8 @@ import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeMap;
 import org.apache.hadoop.hdfs.util.Diff;
 import org.apache.hadoop.util.StringUtils;
 
@@ -56,7 +58,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   /** parent is either an {@link INodeDirectory} or an {@link INodeReference}.*/
   private INode parent = null;
 
-  INode(INode parent) {
+  public INode(INode parent) {
     this.parent = parent;
   }
 
@@ -66,7 +68,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   /**
    * Check whether this is the root inode.
    */
-  final boolean isRoot() {
+  public final boolean isRoot() {
     return getLocalNameBytes().length == 0;
   }
 
@@ -74,7 +76,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   abstract PermissionStatus getPermissionStatus(Snapshot snapshot);
 
   /** The same as getPermissionStatus(null). */
-  final PermissionStatus getPermissionStatus() {
+ public final PermissionStatus getPermissionStatus() {
     return getPermissionStatus(null);
   }
 
@@ -84,7 +86,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    *          otherwise, get the result from the current inode.
    * @return user name
    */
-  abstract String getUserName(Snapshot snapshot);
+  public abstract String getUserName(Snapshot snapshot);
 
   /** The same as getUserName(null). */
   @Override
@@ -96,19 +98,26 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   abstract void setUser(String user);
 
   /** Set user */
-  final INode setUser(String user, Snapshot latest, INodeMap inodeMap)
+ public final INode setUser(String user, Snapshot latest, INodeMap inodeMap)
       throws QuotaExceededException {
     final INode nodeToUpdate = recordModification(latest, inodeMap);
     nodeToUpdate.setUser(user);
     return nodeToUpdate;
   }
+
+    public final INode setFileUser(String user, Snapshot latest, FileINodeMap inodeMap)
+            throws QuotaExceededException {
+        final INode nodeToUpdate = recordFileModification(latest, inodeMap);
+        nodeToUpdate.setUser(user);
+        return nodeToUpdate;
+    }
   /**
    * @param snapshot
    *          if it is not null, get the result from the given snapshot;
    *          otherwise, get the result from the current inode.
    * @return group name
    */
-  abstract String getGroupName(Snapshot snapshot);
+ public abstract String getGroupName(Snapshot snapshot);
 
   /** The same as getGroupName(null). */
   @Override
@@ -117,23 +126,28 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   /** Set group */
-  abstract void setGroup(String group);
+ public abstract void setGroup(String group);
 
   /** Set group */
-  final INode setGroup(String group, Snapshot latest, INodeMap inodeMap)
+public   final INode setGroup(String group, Snapshot latest, INodeMap inodeMap)
       throws QuotaExceededException {
     final INode nodeToUpdate = recordModification(latest, inodeMap);
     nodeToUpdate.setGroup(group);
     return nodeToUpdate;
   }
-
+    public   final INode setFileGroup(String group, Snapshot latest, FileINodeMap inodeMap)
+            throws QuotaExceededException {
+        final INode nodeToUpdate = recordFileModification(latest, inodeMap);
+        nodeToUpdate.setGroup(group);
+        return nodeToUpdate;
+    }
   /**
    * @param snapshot
    *          if it is not null, get the result from the given snapshot;
    *          otherwise, get the result from the current inode.
    * @return permission.
    */
-  abstract FsPermission getFsPermission(Snapshot snapshot);
+public   abstract FsPermission getFsPermission(Snapshot snapshot);
   
   /** The same as getFsPermission(null). */
   @Override
@@ -145,13 +159,18 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   abstract void setPermission(FsPermission permission);
 
   /** Set the {@link FsPermission} of this {@link INode} */
-  INode setPermission(FsPermission permission, Snapshot latest,
+public   INode setPermission(FsPermission permission, Snapshot latest,
       INodeMap inodeMap) throws QuotaExceededException {
     final INode nodeToUpdate = recordModification(latest, inodeMap);
     nodeToUpdate.setPermission(permission);
     return nodeToUpdate;
   }
-
+    public   INode setFilePermission(FsPermission permission, Snapshot latest,
+                                 FileINodeMap inodeMap) throws QuotaExceededException {
+        final INode nodeToUpdate = recordFileModification(latest, inodeMap);
+        nodeToUpdate.setPermission(permission);
+        return nodeToUpdate;
+    }
   /**
    * @return if the given snapshot is null, return this;
    *     otherwise return the corresponding snapshot inode.
@@ -196,7 +215,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     }
     return false;
   }
-
+    public final boolean isFileAncestorDirectory(final FileINodeDirectory dir) {
+        for(FileINodeDirectory p = getFileParent(); p != null; p = p.getFileParent()) {
+            if (p == dir) {
+                return true;
+            }
+        }
+        return false;
+    }
   /**
    * When {@link #recordModification} is called on a referred node,
    * this method tells which snapshot the modification should be
@@ -237,9 +263,10 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    *         However, in some cases, this inode may be replaced with a new inode
    *         for maintaining snapshots. The current inode is then the new inode.
    */
-  abstract INode recordModification(final Snapshot latest,
+ public abstract INode recordModification(final Snapshot latest,
       final INodeMap inodeMap) throws QuotaExceededException;
-
+    public abstract INode recordFileModification(final Snapshot latest,
+                                             final FileINodeMap inodeMap) throws QuotaExceededException;
   /** Check whether it's a reference. */
   public boolean isReference() {
     return false;
@@ -277,6 +304,12 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
         + this.toDetailString());
   }
 
+
+    public FileINodeDirectory asFileDirectory() {
+
+        throw new IllegalStateException("Current inode is not a filedirectory: "
+                + this.toDetailString());
+    }
   /**
    * Check whether it's a symlink
    */
@@ -500,12 +533,23 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     if (parentRef != null) {
       return "parentRef=" + parentRef.getLocalName() + "->";
     } else {
-      final INodeDirectory parentDir = getParent();
-      if (parentDir != null) {
-        return "parentDir=" + parentDir.getLocalName() + "/";
-      } else {
-        return "parent=null";
-      }
+     //  INodeDirectory iNodeDirectory=  getParentReference().getParent();
+    //    if( getParentReference().getParent()==null){
+            final FileINodeDirectory parentDir = getFileParent();
+            if (parentDir != null) {
+                return "parentDir=" + parentDir.getLocalName() + "/";
+            } else {
+                return "parent=null";
+            }
+
+     /*   }else {
+            final INodeDirectory parentDir = getParent();
+            if (parentDir != null) {
+                return "parentDir=" + parentDir.getLocalName() + "/";
+            } else {
+                return "parent=null";
+            }
+        }*/
     }
   }
 
@@ -519,7 +563,10 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return parent == null? null
         : parent.isReference()? getParentReference().getParent(): parent.asDirectory();
   }
-
+    public final FileINodeDirectory getFileParent() {
+        return parent == null? null
+                : parent.isReference()? getParentReference().getFileParent(): parent.asFileDirectory();
+    }
   /**
    * @return the parent as a reference if this is a referred inode;
    *         otherwise, return null.
@@ -533,6 +580,10 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     this.parent = parent;
   }
 
+    /** Set parent directory */
+    public final void setFileParent(FileINodeDirectory parent) {
+        this.parent = parent;
+    }
   /** Set container. */
   public final void setParentReference(INodeReference parent) {
     this.parent = parent;
@@ -540,7 +591,9 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   /** Clear references to other objects. */
   public void clear() {
-    setParent(null);
+
+      setParent(null);
+      setFileParent(null);
   }
 
   /**
@@ -549,7 +602,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    *          otherwise, get the result from the current inode.
    * @return modification time.
    */
-  abstract long getModificationTime(Snapshot snapshot);
+public   abstract long getModificationTime(Snapshot snapshot);
 
   /** The same as getModificationTime(null). */
   @Override
@@ -560,7 +613,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   /** Update modification time if it is larger than the current value. */
   public abstract INode updateModificationTime(long mtime, Snapshot latest,
       INodeMap inodeMap) throws QuotaExceededException;
-
+    public abstract INode updateFileModificationTime(long mtime, Snapshot latest,
+                                                 FileINodeMap inodeMap) throws QuotaExceededException;
   /** Set the last modification time of inode. */
   public abstract void setModificationTime(long modificationTime);
 
@@ -572,13 +626,20 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return nodeToUpdate;
   }
 
+    public final INode setFileModificationTime(long modificationTime,
+                                           Snapshot latest, FileINodeMap inodeMap) throws QuotaExceededException {
+        final INode nodeToUpdate = recordFileModification(latest, inodeMap);
+        nodeToUpdate.setModificationTime(modificationTime);
+        return nodeToUpdate;
+    }
+
   /**
    * @param snapshot
    *          if it is not null, get the result from the given snapshot;
    *          otherwise, get the result from the current inode.
    * @return access time
    */
-  abstract long getAccessTime(Snapshot snapshot);
+ public abstract long getAccessTime(Snapshot snapshot);
 
   /** The same as getAccessTime(null). */
   @Override
@@ -601,19 +662,24 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return nodeToUpdate;
   }
 
-
+    public final INode setFileAccessTime(long accessTime, Snapshot latest,
+                                     FileINodeMap inodeMap) throws QuotaExceededException {
+        final INode nodeToUpdate = recordFileModification(latest, inodeMap);
+        nodeToUpdate.setAccessTime(accessTime);
+        return nodeToUpdate;
+    }
   /**
    * Breaks file path into components.
    * @param path
    * @return array of byte arrays each of which represents 
    * a single path component.
    */
-  static byte[][] getPathComponents(String path) {
+  public static byte[][] getPathComponents(String path) {
     return getPathComponents(getPathNames(path));
   }
 
   /** Convert strings to byte arrays for path components. */
-  static byte[][] getPathComponents(String[] strings) {
+ public static byte[][] getPathComponents(String[] strings) {
     if (strings.length == 0) {
       return new byte[][]{null};
     }
@@ -629,7 +695,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * @throws AssertionError if the given path is invalid.
    * @return array of path components.
    */
-  static String[] getPathNames(String path) {
+ public static String[] getPathNames(String path) {
     if (path == null || !path.startsWith(Path.SEPARATOR)) {
       throw new AssertionError("Absolute path required");
     }

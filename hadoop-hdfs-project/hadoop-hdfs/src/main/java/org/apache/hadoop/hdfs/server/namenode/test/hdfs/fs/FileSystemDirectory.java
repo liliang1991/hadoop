@@ -15,10 +15,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.*;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
-import org.apache.hadoop.hdfs.server.namenode.test.hdfs.NameNodeTest;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.MyNameNode;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.*;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.manager.FileBlockManager;
 import org.apache.hadoop.hdfs.util.ByteArray;
@@ -39,7 +37,7 @@ public class FileSystemDirectory {
     private static FileINodeDirectoryWithQuota createRoot(FileNamesystem namesystem) {
         final FileINodeDirectoryWithQuota r = new FileINodeDirectoryWithQuota(
                 INodeId.ROOT_INODE_ID,
-                INodeDirectory.ROOT_NAME,
+                FileINodeDirectory.ROOT_NAME,
                 namesystem.createFsOwnerPermissions(new FsPermission((short) 0755)));
         final FileINodeDirectorySnapshottable s = new FileINodeDirectorySnapshottable(r);
         s.setSnapshotQuota(0);
@@ -88,7 +86,7 @@ public class FileSystemDirectory {
         int threshold = conf.getInt(
                 DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_KEY,
                 DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_DEFAULT);
-        NameNode.LOG.info("Caching file names occuring more than " + threshold
+        MyNameNode.LOG.info("Caching file names occuring more than " + threshold
                 + " times");
         nameCache = new FileNameCache<ByteArray>(threshold);
         namesystem = ns;
@@ -180,8 +178,8 @@ public class FileSystemDirectory {
                 return newNode;
             }
         } catch (IOException e) {
-            if(NameNode.stateChangeLog.isDebugEnabled()) {
-                NameNode.stateChangeLog.debug(
+            if(MyNameNode.stateChangeLog.isDebugEnabled()) {
+                MyNameNode.stateChangeLog.debug(
                         "DIR* FSDirectory.unprotectedAddFile: exception when add " + path
                                 + " to the file system", e);
             }
@@ -261,7 +259,7 @@ public class FileSystemDirectory {
             updateCountNoQuotaCheck(iip, pos,
                     -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
         } else {
-            iip.setINode(pos - 1, child.getParent());
+            iip.setINode(pos - 1, child.getFileParent());
             addToInodeMap(child);
         }
         return added;
@@ -295,7 +293,7 @@ public class FileSystemDirectory {
                 throw e;
             } else {
                 // Do not throw if edits log is still being processed
-                NameNode.LOG.error("ERROR in FSDirectory.verifyINodeName", e);
+                MyNameNode.LOG.error("ERROR in FSDirectory.verifyINodeName", e);
             }
         }
     }
@@ -305,7 +303,7 @@ public class FileSystemDirectory {
             return;
         }
 
-        final INodeDirectory parent = pathComponents[pos-1].asDirectory();
+        final FileINodeDirectory parent = pathComponents[pos-1].asFileDirectory();
         final int count = parent.getChildrenList(null).size();
         if (count >= maxDirItems) {
             final FSLimitException.MaxDirectoryItemsExceededException e
@@ -315,7 +313,7 @@ public class FileSystemDirectory {
                 throw e;
             } else {
                 // Do not throw if edits log is still being processed
-                NameNode.LOG.error("FSDirectory.verifyMaxDirItems: "
+                MyNameNode.LOG.error("FSDirectory.verifyMaxDirItems: "
                         + e.getLocalizedMessage());
             }
         }
@@ -366,7 +364,7 @@ public class FileSystemDirectory {
         try {
             updateCount(inodesInPath, numOfINodes, nsDelta, dsDelta, false);
         } catch (QuotaExceededException e) {
-            NameNode.LOG.error("BUG: unexpected exception ", e);
+            MyNameNode.LOG.error("BUG: unexpected exception ", e);
         }
     }
     private static void verifyQuota(INode[] inodes, int pos, long nsDelta,
@@ -431,7 +429,7 @@ public class FileSystemDirectory {
             blocksize = fileNode.getPreferredBlockSize();
         }
         int childrenNum = node.isDirectory() ?
-                node.asDirectory().getChildrenNum(snapshot) : 0;
+                node.asFileDirectory().getChildrenNum(snapshot) : 0;
 
         return new HdfsFileStatus(
                 size,
@@ -473,7 +471,7 @@ public class FileSystemDirectory {
             }
         }
         int childrenNum = node.isDirectory() ?
-                node.asDirectory().getChildrenNum(snapshot) : 0;
+                node.asFileDirectory().getChildrenNum(snapshot) : 0;
 
         return new HdfsLocatedFileStatus(size, node.isDirectory(), replication,
                 blocksize, node.getModificationTime(snapshot),
@@ -556,15 +554,15 @@ public class FileSystemDirectory {
             throws UnresolvedLinkException, QuotaExceededException,
             SnapshotAccessControlException, SnapshotException {
         assert hasWriteLock();
-        if (NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog.debug("DIR* FSNamesystem.concat to "+target);
+        if (MyNameNode.stateChangeLog.isDebugEnabled()) {
+            MyNameNode.stateChangeLog.debug("DIR* FSNamesystem.concat to "+target);
         }
         // do the move
 
         final FileINodesInPath trgIIP = rootDir.getINodesInPath4Write(target, true);
         final INode[] trgINodes = trgIIP.getINodes();
         final INodeFile trgInode = trgIIP.getLastINode().asFile();
-        INodeDirectory trgParent = trgINodes[trgINodes.length-2].asDirectory();
+        FileINodeDirectory trgParent = trgINodes[trgINodes.length-2].asFileDirectory();
         final Snapshot trgLatestSnapshot = trgIIP.getLatestSnapshot();
 
         final INodeFile [] allSrcInodes = new INodeFile[srcs.length];
@@ -758,8 +756,8 @@ public class FileSystemDirectory {
         for (int i = 4; i < pathComponents.length; i++) {
             path.append(Path.SEPARATOR).append(DFSUtil.bytes2String(pathComponents[i]));
         }
-        if (NameNode.LOG.isDebugEnabled()) {
-            NameNode.LOG.debug("Resolved path is " + path);
+        if (MyNameNode.LOG.isDebugEnabled()) {
+            MyNameNode.LOG.debug("Resolved path is " + path);
         }
         return path.toString();
     }
@@ -813,7 +811,7 @@ public class FileSystemDirectory {
         final INode node = this.getINode(dirPath);
         if (node != null
                 && node.isDirectory()
-                && node.asDirectory() instanceof INodeDirectorySnapshottable) {
+                && node.asFileDirectory() instanceof FileINodeDirectorySnapshottable) {
             return new HdfsFileStatus(0, true, 0, 0, 0, 0, null, null, null, null,
                     HdfsFileStatus.EMPTY_NAME, -1L, 0);
         }
@@ -865,12 +863,12 @@ public class FileSystemDirectory {
             writeUnlock();
         }
         if (!added) {
-            NameNodeTest.stateChangeLog.info("DIR* addFile: failed to add " + path);
+            MyNameNode.stateChangeLog.info("DIR* addFile: failed to add " + path);
             return null;
         }
 
-        if(NameNodeTest.stateChangeLog.isDebugEnabled()) {
-            NameNodeTest.stateChangeLog.debug("DIR* addFile: " + path + " is added");
+        if(MyNameNode.stateChangeLog.isDebugEnabled()) {
+            MyNameNode.stateChangeLog.debug("DIR* addFile: " + path + " is added");
         }
         return newNode;
     }
@@ -962,12 +960,12 @@ public class FileSystemDirectory {
                 // Directory creation also count towards FilesCreated
                 // to match count of FilesDeleted metric.
                 if (getFSNamesystem() != null)
-                    NameNode.getNameNodeMetrics().incrFilesCreated();
+                    MyNameNode.getNameNodeMetrics().incrFilesCreated();
 
                 final String cur = pathbuilder.toString();
                 fsImage.getEditLog().logMkDir(cur, inodes[i]);
-                if(NameNode.stateChangeLog.isDebugEnabled()) {
-                    NameNode.stateChangeLog.debug(
+                if(MyNameNode.stateChangeLog.isDebugEnabled()) {
+                    MyNameNode.stateChangeLog.debug(
                             "DIR* FSDirectory.mkdirs: created directory " + cur);
                 }
             }
@@ -984,7 +982,7 @@ public class FileSystemDirectory {
                                   int pos, byte[] name, PermissionStatus permission, long timestamp)
             throws QuotaExceededException {
         assert hasWriteLock();
-        final INodeDirectory dir = new INodeDirectory(inodeId, name, permission,
+        final FileINodeDirectory dir = new FileINodeDirectory(inodeId, name, permission,
                 timestamp);
         if (addChild(inodesInPath, pos, dir, true)) {
             inodesInPath.setINode(pos, dir);
@@ -1013,7 +1011,7 @@ public class FileSystemDirectory {
                 return false;
             }
             final Snapshot s = inodesInPath.getPathSnapshot();
-            return !inode.asDirectory().getChildrenList(s).isEmpty();
+            return !inode.asFileDirectory().getChildrenList(s).isEmpty();
         } finally {
             readUnlock();
         }
@@ -1021,8 +1019,8 @@ public class FileSystemDirectory {
 
     boolean delete(String src, INode.BlocksMapUpdateInfo collectedBlocks,
                    List<INode> removedINodes, boolean logRetryCache) throws IOException {
-        if (NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + src);
+        if (MyNameNode.stateChangeLog.isDebugEnabled()) {
+            MyNameNode.stateChangeLog.debug("DIR* FSDirectory.delete: " + src);
         }
         waitForReady();
         long now = now();
@@ -1066,13 +1064,13 @@ public class FileSystemDirectory {
         final INode[] inodes = iip.getINodes();
         if (inodes == null || inodes.length == 0
                 || inodes[inodes.length - 1] == null) {
-            if(NameNodeTest.stateChangeLog.isDebugEnabled()) {
-                NameNodeTest.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
+            if(MyNameNode.stateChangeLog.isDebugEnabled()) {
+                MyNameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
                         + "failed to remove " + src + " because it does not exist");
             }
             return false;
         } else if (inodes.length == 1) { // src is the root
-            NameNodeTest.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: "
+            MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: "
                     + "failed to remove " + src
                     + " because the root is not allowed to be deleted");
             return false;
@@ -1142,7 +1140,7 @@ public class FileSystemDirectory {
         }
 
         // set the parent's modification time
-        final INodeDirectory parent = targetNode.getParent();
+        final FileINodeDirectory parent = targetNode.getFileParent();
         parent.updateFileModificationTime(mtime, latestSnapshot, inodeMap);
         if (removed == 0) {
             return 0;
@@ -1158,15 +1156,15 @@ public class FileSystemDirectory {
                     -counts.get(Quota.DISKSPACE), true);
             removed = counts.get(Quota.NAMESPACE);
         }
-        if (NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
+        if (MyNameNode.stateChangeLog.isDebugEnabled()) {
+            MyNameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
                     + targetNode.getFullPathName() + " is removed");
         }
         return removed;
     }
     private void incrDeletedFileCount(long count) {
         if (getFSNamesystem() != null)
-            NameNodeTest.getNameNodeMetrics().incrFilesDeleted(count);
+            MyNameNode.getNameNodeMetrics().incrFilesDeleted(count);
     }
 
     private long removeLastINode(final FileINodesInPath iip)
@@ -1205,8 +1203,8 @@ public class FileSystemDirectory {
         try {
             // file is closed
             fsImage.getEditLog().logCloseFile(path, file);
-            if (NameNode.stateChangeLog.isDebugEnabled()) {
-                NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
+            if (MyNameNode.stateChangeLog.isDebugEnabled()) {
+                MyNameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
                         +path+" with "+ file.getBlocks().length
                         +" blocks is persisted to the file system");
             }
@@ -1321,8 +1319,8 @@ public class FileSystemDirectory {
         }
         getBlockManager().removeBlockFromMap(block);
 
-        if(NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog.debug("DIR* FSDirectory.removeBlock: "
+        if(MyNameNode.stateChangeLog.isDebugEnabled()) {
+            MyNameNode.stateChangeLog.debug("DIR* FSDirectory.removeBlock: "
                     +path+" with "+block
                     +" block is removed from the file system");
         }
@@ -1342,8 +1340,8 @@ public class FileSystemDirectory {
         writeLock();
         try {
             fsImage.getEditLog().logUpdateBlocks(path, file, logRetryCache);
-            if(NameNode.stateChangeLog.isDebugEnabled()) {
-                NameNode.stateChangeLog.debug("DIR* FSDirectory.persistBlocks: "
+            if(MyNameNode.stateChangeLog.isDebugEnabled()) {
+                MyNameNode.stateChangeLog.debug("DIR* FSDirectory.persistBlocks: "
                         +path+" with "+ file.getBlocks().length
                         +" blocks is persisted to the file system");
             }
@@ -1377,8 +1375,8 @@ public class FileSystemDirectory {
             getBlockManager().addBlockCollection(blockInfo, fileINode);
             fileINode.addBlock(blockInfo);
 
-            if(NameNode.stateChangeLog.isDebugEnabled()) {
-                NameNode.stateChangeLog.debug("DIR* FSDirectory.addBlock: "
+            if(MyNameNode.stateChangeLog.isDebugEnabled()) {
+                MyNameNode.stateChangeLog.debug("DIR* FSDirectory.addBlock: "
                         + path + " with " + block
                         + " block is added to the in-memory "
                         + "file system");
@@ -1426,8 +1424,8 @@ public class FileSystemDirectory {
     boolean renameTo(String src, String dst, boolean logRetryCache)
             throws QuotaExceededException, UnresolvedLinkException,
             FileAlreadyExistsException, SnapshotAccessControlException, IOException {
-        if (NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: "
+        if (MyNameNode.stateChangeLog.isDebugEnabled()) {
+            MyNameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: "
                     +src+" to "+dst);
         }
         waitForReady();
@@ -1451,13 +1449,13 @@ public class FileSystemDirectory {
 
         // check the validation of the source
         if (srcInode == null) {
-            NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                     + "failed to rename " + src + " to " + dst
                     + " because source does not exist");
             return false;
         }
         if (srcIIP.getINodes().length == 1) {
-            NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                     +"failed to rename "+src+" to "+dst+ " because source is the root");
             return false;
         }
@@ -1485,7 +1483,7 @@ public class FileSystemDirectory {
         // dst cannot be directory or a file under src
         if (dst.startsWith(src) &&
                 dst.charAt(src.length()) == Path.SEPARATOR_CHAR) {
-            NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                     + "failed to rename " + src + " to " + dst
                     + " because destination starts with src");
             return false;
@@ -1498,14 +1496,14 @@ public class FileSystemDirectory {
                     "Modification on RO snapshot is disallowed");
         }
         if (dstIIP.getLastINode() != null) {
-            NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                     +"failed to rename "+src+" to "+dst+
                     " because destination exists");
             return false;
         }
         INode dstParent = dstIIP.getINode(-2);
         if (dstParent == null) {
-            NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                     +"failed to rename "+src+" to "+dst+
                     " because destination's parent does not exist");
             return false;
@@ -1556,7 +1554,7 @@ public class FileSystemDirectory {
             // remove src
             final long removedSrc = removeLastINode(srcIIP);
             if (removedSrc == -1) {
-                NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+                MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                         + "failed to rename " + src + " to " + dst
                         + " because the source can not be removed");
                 return false;
@@ -1582,15 +1580,15 @@ public class FileSystemDirectory {
                 withCount.getReferredINode().setLocalName(dstChildName);
                 Snapshot dstSnapshot = dstIIP.getLatestSnapshot();
                 final INodeReference.DstReference ref = new INodeReference.DstReference(
-                        dstParent.asDirectory(), withCount,
+                        dstParent.asFileDirectory(), withCount,
                         dstSnapshot == null ? Snapshot.INVALID_ID : dstSnapshot.getId());
                 toDst = ref;
             }
 
             added = addLastINodeNoQuotaCheck(dstIIP, toDst);
             if (added) {
-                if (NameNodeTest.stateChangeLog.isDebugEnabled()) {
-                    NameNodeTest.stateChangeLog.debug("DIR* FSDirectory.unprotectedRenameTo: "
+                if (MyNameNode.stateChangeLog.isDebugEnabled()) {
+                    MyNameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedRenameTo: "
                             + src + " is renamed to " + dst);
                 }
                 // update modification time of dst and the parent of src
@@ -1617,7 +1615,7 @@ public class FileSystemDirectory {
             }
         } finally {
             if (!added) {
-                final INodeDirectory srcParent = srcIIP.getINode(-2).asDirectory();
+                final FileINodeDirectory srcParent = srcIIP.getINode(-2).asFileDirectory();
                 final INode oldSrcChild = srcChild;
                 // put it back
                 if (withCount == null) {
@@ -1640,7 +1638,7 @@ public class FileSystemDirectory {
                     // srcParent must be an INodeDirectoryWithSnapshot instance since
                     // isSrcInSnapshot is true and src node has been removed from
                     // srcParent
-                    ((INodeDirectoryWithSnapshot) srcParent).undoRename4ScrParent(
+                    ((FileINodeDirectoryWithSnapshot) srcParent).undoRename4ScrParent(
                             oldSrcChild.asReference(), srcChild, srcIIP.getLatestSnapshot());
                 } else {
                     // original srcChild is not in latest snapshot, we only need to add
@@ -1649,7 +1647,7 @@ public class FileSystemDirectory {
                 }
             }
         }
-        NameNodeTest.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+        MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                 +"failed to rename "+src+" to "+dst);
         return false;
     }
@@ -1677,7 +1675,7 @@ public class FileSystemDirectory {
         try {
             return addLastINode(inodesInPath, i, false);
         } catch (QuotaExceededException e) {
-            NameNode.LOG.warn("FSDirectory.addChildNoQuotaCheck - unexpected", e);
+            MyNameNode.LOG.warn("FSDirectory.addChildNoQuotaCheck - unexpected", e);
         }
         return false;
     }
@@ -1712,8 +1710,8 @@ public class FileSystemDirectory {
             throws FileAlreadyExistsException, FileNotFoundException,
             ParentNotDirectoryException, QuotaExceededException,
             UnresolvedLinkException, IOException {
-        if (NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: " + src
+        if (MyNameNode.stateChangeLog.isDebugEnabled()) {
+            MyNameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: " + src
                     + " to " + dst);
         }
         waitForReady();
@@ -1747,13 +1745,13 @@ public class FileSystemDirectory {
         // validate source
         if (srcInode == null) {
             error = "rename source " + src + " is not found.";
-            NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                     + error);
             throw new FileNotFoundException(error);
         }
         if (srcIIP.getINodes().length == 1) {
             error = "rename source cannot be the root";
-            NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                     + error);
             throw new IOException(error);
         }
@@ -1776,14 +1774,14 @@ public class FileSystemDirectory {
                 dst.charAt(src.length()) == Path.SEPARATOR_CHAR) {
             error = "Rename destination " + dst
                     + " is a directory or file under source " + src;
-            NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                     + error);
             throw new IOException(error);
         }
         FileINodesInPath dstIIP = rootDir.getINodesInPath4Write(dst, false);
         if (dstIIP.getINodes().length == 1) {
             error = "rename destination cannot be the root";
-            NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                     + error);
             throw new IOException(error);
         }
@@ -1796,22 +1794,22 @@ public class FileSystemDirectory {
             if (dstInode.isDirectory() != srcInode.isDirectory()) {
                 error = "Source " + src + " and destination " + dst
                         + " must both be directories";
-                NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+                MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                         + error);
                 throw new IOException(error);
             }
             if (!overwrite) { // If destination exists, overwrite flag must be true
                 error = "rename destination " + dst + " already exists";
-                NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+                MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                         + error);
                 throw new FileAlreadyExistsException(error);
             }
             if (dstInode.isDirectory()) {
-                final ReadOnlyList<INode> children = dstInode.asDirectory()
+                final ReadOnlyList<INode> children = dstInode.asFileDirectory()
                         .getChildrenList(null);
                 if (!children.isEmpty()) {
                     error = "rename destination directory is not empty: " + dst;
-                    NameNode.stateChangeLog.warn(
+                    MyNameNode.stateChangeLog.warn(
                             "DIR* FSDirectory.unprotectedRenameTo: " + error);
                     throw new IOException(error);
                 }
@@ -1822,13 +1820,13 @@ public class FileSystemDirectory {
         INode dstParent = dstIIP.getINode(-2);
         if (dstParent == null) {
             error = "rename destination parent " + dst + " not found.";
-            NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                     + error);
             throw new FileNotFoundException(error);
         }
         if (!dstParent.isDirectory()) {
             error = "rename destination parent " + dst + " is a file.";
-            NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                     + error);
             throw new ParentNotDirectoryException(error);
         }
@@ -1877,7 +1875,7 @@ public class FileSystemDirectory {
         if (removedSrc == -1) {
             error = "Failed to rename " + src + " to " + dst
                     + " because the source can not be removed";
-            NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                     + error);
             throw new IOException(error);
         }
@@ -1910,7 +1908,7 @@ public class FileSystemDirectory {
                 withCount.getReferredINode().setLocalName(dstChildName);
                 Snapshot dstSnapshot = dstIIP.getLatestSnapshot();
                 final INodeReference.DstReference ref = new INodeReference.DstReference(
-                        dstIIP.getINode(-2).asDirectory(), withCount,
+                        dstIIP.getINode(-2).asFileDirectory(), withCount,
                         dstSnapshot == null ? Snapshot.INVALID_ID : dstSnapshot.getId());
                 toDst = ref;
             }
@@ -1918,8 +1916,8 @@ public class FileSystemDirectory {
             // add src as dst to complete rename
             if (addLastINodeNoQuotaCheck(dstIIP, toDst)) {
                 undoRemoveSrc = false;
-                if (NameNode.stateChangeLog.isDebugEnabled()) {
-                    NameNode.stateChangeLog.debug(
+                if (MyNameNode.stateChangeLog.isDebugEnabled()) {
+                    MyNameNode.stateChangeLog.debug(
                             "DIR* FSDirectory.unprotectedRenameTo: " + src
                                     + " is renamed to " + dst);
                 }
@@ -1967,7 +1965,7 @@ public class FileSystemDirectory {
         } finally {
             if (undoRemoveSrc) {
                 // Rename failed - restore src
-                final INodeDirectory srcParent = srcIIP.getINode(-2).asDirectory();
+                final FileINodeDirectory srcParent = srcIIP.getINode(-2).asFileDirectory();
                 final INode oldSrcChild = srcChild;
                 // put it back
                 if (withCount == null) {
@@ -1986,8 +1984,8 @@ public class FileSystemDirectory {
                     withCount.getReferredINode().setLocalName(srcChildName);
                 }
 
-                if (srcParent instanceof INodeDirectoryWithSnapshot) {
-                    ((INodeDirectoryWithSnapshot) srcParent).undoRename4ScrParent(
+                if (srcParent instanceof FileINodeDirectoryWithSnapshot) {
+                    ((FileINodeDirectoryWithSnapshot) srcParent).undoRename4ScrParent(
                             oldSrcChild.asReference(), srcChild, srcIIP.getLatestSnapshot());
                 } else {
                     // srcParent is not an INodeDirectoryWithSnapshot, we only need to add
@@ -1997,8 +1995,8 @@ public class FileSystemDirectory {
             }
             if (undoRemoveDst) {
                 // Rename failed - restore dst
-                if (dstParent instanceof INodeDirectoryWithSnapshot) {
-                    ((INodeDirectoryWithSnapshot) dstParent).undoRename4DstParent(
+                if (dstParent instanceof FileINodeDirectoryWithSnapshot) {
+                    ((FileINodeDirectoryWithSnapshot) dstParent).undoRename4DstParent(
                             removedDst, dstIIP.getLatestSnapshot());
                 } else {
                     addLastINodeNoQuotaCheck(dstIIP, removedDst);
@@ -2011,7 +2009,7 @@ public class FileSystemDirectory {
                 }
             }
         }
-        NameNodeTest.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+        MyNameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
                 + "failed to rename " + src + " to " + dst);
         throw new IOException("rename from " + src + " to " + dst + " failed.");
     }
@@ -2049,7 +2047,7 @@ public class FileSystemDirectory {
                                 targetNode, needLocation, snapshot)}, 0);
             }
 
-            final INodeDirectory dirInode = targetNode.asDirectory();
+            final FileINodeDirectory dirInode = targetNode.asFileDirectory();
             final ReadOnlyList<INode> contents = dirInode.getChildrenList(snapshot);
             int startChild = FileINodeDirectory.nextChild(contents, startAfter);
             int totalNumChildren = contents.size();
@@ -2077,7 +2075,7 @@ public class FileSystemDirectory {
                 src.length() - HdfsConstants.DOT_SNAPSHOT_DIR.length()));
 
         final INode node = this.getINode(dirPath);
-        final INodeDirectorySnapshottable dirNode = INodeDirectorySnapshottable
+        final FileINodeDirectorySnapshottable dirNode = FileINodeDirectorySnapshottable
                 .valueOf(node, dirPath);
         final ReadOnlyList<Snapshot> snapshots = dirNode.getSnapshotList();
         int skipSize = ReadOnlyList.Util.binarySearch(snapshots, startAfter);
@@ -2125,7 +2123,7 @@ public class FileSystemDirectory {
         // fill up the inodes in the path from this inode to root
         for (int i = 0; i < depth; i++) {
             if (inode == null) {
-                NameNode.stateChangeLog.warn("Could not get full path."
+                MyNameNode.stateChangeLog.warn("Could not get full path."
                         + " Corresponding file might have deleted already.");
                 return null;
             }
@@ -2277,14 +2275,14 @@ public class FileSystemDirectory {
             writeUnlock();
         }
         if (newNode == null) {
-            NameNode.stateChangeLog.info("DIR* addSymlink: failed to add " + path);
+            MyNameNode.stateChangeLog.info("DIR* addSymlink: failed to add " + path);
             return null;
         }
         fsImage.getEditLog().logSymlink(path, target, modTime, modTime, newNode,
                 logRetryCache);
 
-        if(NameNode.stateChangeLog.isDebugEnabled()) {
-            NameNode.stateChangeLog.debug("DIR* addSymlink: " + path + " is added");
+        if(MyNameNode.stateChangeLog.isDebugEnabled()) {
+            MyNameNode.stateChangeLog.debug("DIR* addSymlink: " + path + " is added");
         }
         return newNode;
     }

@@ -751,10 +751,11 @@ public class FSImageFormat {
           = referenceMap.loadINodeReferenceWithCount(isSnapshotINode, in, this);
 
       if (isWithName) {
-          return new INodeReference.WithName(null, withCount, localName,
+          return new INodeReference.WithName( withCount, localName,
               snapshotId);
       } else {
-        final INodeReference ref = new INodeReference.DstReference(null,
+        INodeDirectory iNodeDirectory=null;
+        final INodeReference ref = new INodeReference.DstReference(iNodeDirectory,
             withCount, snapshotId);
         return ref;
       }

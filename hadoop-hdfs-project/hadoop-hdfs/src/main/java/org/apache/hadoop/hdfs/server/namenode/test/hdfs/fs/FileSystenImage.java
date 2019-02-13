@@ -1,5 +1,6 @@
 package org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -12,10 +13,11 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
-import org.apache.hadoop.hdfs.server.namenode.test.hdfs.NameNodeTest;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.MyNameNode;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeDirectoryWithQuota;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.manager.NameNodeStorageRetentionManager;
@@ -26,7 +28,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
-import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.util.Time;
 
 
@@ -63,9 +64,100 @@ public class FileSystenImage implements Closeable {
   public   boolean isUpgradeFinalized() {
         return isUpgradeFinalized;
     }
+    static Collection<URI> getCheckpointDirs(Configuration conf,
+                                             String defaultValue) {
+        Collection<String> dirNames = conf.getTrimmedStringCollection(
+                DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY);
+        if (dirNames.size() == 0 && defaultValue != null) {
+            dirNames.add(defaultValue);
+        }
+        return Util.stringCollectionAsURIs(dirNames);
+    }
 
-    boolean recoverTransitionRead(HdfsServerConstants.StartupOption startOpt, FileSystenImage fsImage, boolean haEnabled, FileNamesystem target) throws IOException {
-        MetaRecoveryContext recovery = startOpt.createRecoveryContext();
+    static List<URI> getCheckpointEditsDirs(Configuration conf,
+                                            String defaultName) {
+        Collection<String> dirNames = conf.getTrimmedStringCollection(
+                DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY);
+        if (dirNames.size() == 0 && defaultName != null) {
+            dirNames.add(defaultName);
+        }
+        return Util.stringCollectionAsURIs(dirNames);
+    }
+    /**
+     * Load image from a checkpoint directory and save it into the current one.
+     * @param target the NameSystem to import into
+     * @throws IOException
+     */
+    void doImportCheckpoint(FileNamesystem target) throws IOException {
+        Collection<URI> checkpointDirs =
+                FileSystenImage.getCheckpointDirs(conf, null);
+        List<URI> checkpointEditsDirs =
+                FileSystenImage.getCheckpointEditsDirs(conf, null);
+
+        if (checkpointDirs == null || checkpointDirs.isEmpty()) {
+            throw new IOException("Cannot import image from a checkpoint. "
+                    + "\"dfs.namenode.checkpoint.dir\" is not set." );
+        }
+
+        if (checkpointEditsDirs == null || checkpointEditsDirs.isEmpty()) {
+            throw new IOException("Cannot import image from a checkpoint. "
+                    + "\"dfs.namenode.checkpoint.dir\" is not set." );
+        }
+
+        FileSystenImage realImage = target.getFSImage();
+        FileSystenImage ckptImage = new FileSystenImage(conf,
+                checkpointDirs, checkpointEditsDirs);
+        target.dir.fsImage = ckptImage;
+        // load from the checkpoint dirs
+        try {
+            ckptImage.recoverTransitionRead(HdfsServerConstants.StartupOption.REGULAR, target, null);
+        } finally {
+            ckptImage.close();
+        }
+        // return back the real image
+        realImage.getStorage().setStorageInfo(ckptImage.getStorage());
+        realImage.getEditLog().setNextTxId(ckptImage.getEditLog().getLastWrittenTxId()+1);
+        realImage.initEditLog();
+
+        target.dir.fsImage = realImage;
+        realImage.getStorage().setBlockPoolID(ckptImage.getBlockPoolID());
+
+        // and save it but keep the same checkpointTime
+        saveNamespace(target);
+        getStorage().writeAll();
+    }
+
+    public int getNamespaceID() {
+        return storage.getNamespaceID();
+    }
+    public void initEditLog() {
+        Preconditions.checkState(getNamespaceID() != 0,
+                "Must know namespace ID before initting edit log");
+        String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
+        if (!HAUtil.isHAEnabled(conf, nameserviceId)) {
+            editLog.initJournalsForWrite();
+            editLog.recoverUnclosedStreams();
+        } else {
+            editLog.initSharedJournalsForRead();
+        }
+    }
+    boolean recoverTransitionRead(HdfsServerConstants.StartupOption startOpt, FileNamesystem target,
+                                  MetaRecoveryContext recovery) throws IOException {
+        // 3. Do transitions
+        switch(startOpt) {
+            case UPGRADE:
+               // doUpgrade(target);
+                return false; // upgrade saved image already
+            case IMPORT:
+                doImportCheckpoint(target);
+                return false; // import checkpoint saved image already
+            case ROLLBACK:
+                //doRollback();
+                break;
+            case REGULAR:
+            default:
+                // just load the image
+        }
         FSImageStorageInspector inspector = storage.readAndInspectDirs();
         FSImageStorageInspector.FSImageFile imageFile = null;
 
@@ -73,7 +165,7 @@ public class FileSystenImage implements Closeable {
 
         List<FSImageStorageInspector.FSImageFile> imageFiles = inspector.getLatestImages();
 
-        StartupProgress prog = NameNode.getStartupProgress();
+        StartupProgress prog = MyNameNode.getStartupProgress();
         prog.beginPhase(Phase.LOADING_FSIMAGE);
         File phaseFile = imageFiles.get(0).getFile();
         prog.setFile(Phase.LOADING_FSIMAGE, phaseFile.getAbsolutePath());
@@ -121,9 +213,7 @@ public class FileSystenImage implements Closeable {
         for (int i = 0; i < imageFiles.size(); i++) {
             try {
                 imageFile = imageFiles.get(i);
-                long txnsAdvanced = loadEdits(editStreams, target, recovery);
                 loadFSImageFile(target, recovery, imageFile);
-
                 break;
             } catch (IOException ioe) {
                 ioe.printStackTrace();
@@ -191,7 +281,7 @@ public class FileSystenImage implements Closeable {
 
         Storage.StorageDirectory sdForProperties = imageFile.sd;
         storage.readProperties(sdForProperties);
-      /*  StartupProgress prog = NameNodeTest.getStartupProgress();
+      /*  StartupProgress prog = MyNameNode.getStartupProgress();
         Iterable<EditLogInputStream> editStreams = null;
         FSImageStorageInspector inspector = storage.readAndInspectDirs();
         boolean needToSave = inspector.needToSave();
@@ -217,7 +307,7 @@ public class FileSystenImage implements Closeable {
 
     public long loadEdits(Iterable<EditLogInputStream> editStreams,
                           FileNamesystem target, MetaRecoveryContext recovery) throws IOException {
-        StartupProgress prog = NameNodeTest.getStartupProgress();
+        StartupProgress prog = MyNameNode.getStartupProgress();
         prog.beginPhase(Phase.LOADING_EDITS);
         long prevLastAppliedTxId = lastAppliedTxId;
         try {
@@ -253,8 +343,11 @@ public class FileSystenImage implements Closeable {
     }
 
     @Override
-    public void close() throws IOException {
-
+   synchronized public void close() throws IOException {
+        if (editLog != null) { // 2NN doesn't have any edit log
+            getEditLog().close();
+        }
+        storage.close();
     }
 
     public String getBlockPoolID() {

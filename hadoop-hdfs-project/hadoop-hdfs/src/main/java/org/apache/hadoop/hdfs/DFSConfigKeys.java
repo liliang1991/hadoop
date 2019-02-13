@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
  *
  */
 
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String  DFS_BLOCK_SIZE_KEY = "dfs.blocksize";

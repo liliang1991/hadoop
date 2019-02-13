@@ -31,6 +31,8 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapsho
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeMap;
 
 /**
  * An anonymous reference to an inode.
@@ -157,7 +159,10 @@ public abstract class INodeReference extends INode {
   public final INodeDirectory asDirectory() {
     return referred.asDirectory();
   }
-  
+  @Override
+  public final FileINodeDirectory asFileDirectory() {
+    return referred.asFileDirectory();
+  }
   @Override
   public final boolean isSymlink() {
     return referred.isSymlink();
@@ -204,7 +209,7 @@ public abstract class INodeReference extends INode {
   }
   
   @Override
-  final void setGroup(String group) {
+ public final void setGroup(String group) {
     referred.setGroup(group);
   }
   
@@ -254,7 +259,7 @@ public abstract class INodeReference extends INode {
   }
 
   @Override
-  final INode recordModification(Snapshot latest, final INodeMap inodeMap)
+public   final INode recordModification(Snapshot latest, final INodeMap inodeMap)
       throws QuotaExceededException {
     referred.recordModification(latest, inodeMap);
     // reference is never replaced 
@@ -377,6 +382,16 @@ public abstract class INodeReference extends INode {
       }
     }
 
+    @Override
+    public INode recordFileModification(Snapshot latest, FileINodeMap inodeMap) throws QuotaExceededException {
+      return null;
+    }
+
+    @Override
+    public INode updateFileModificationTime(long mtime, Snapshot latest, FileINodeMap inodeMap) throws QuotaExceededException {
+      return null;
+    }
+
     /** Decrement and then return the reference count. */
     public void removeReference(INodeReference ref) {
       if (ref instanceof WithName) {
@@ -428,6 +443,20 @@ public abstract class INodeReference extends INode {
       referred.addReference(this);
     }
 
+    public WithName( WithCount referred, byte[] name,
+                    int lastSnapshotId) {
+      super(null, referred);
+      this.name = name;
+      this.lastSnapshotId = lastSnapshotId;
+      referred.addReference(this);
+    }
+    public WithName(FileINodeDirectory parent, WithCount referred, byte[] name,
+                    int lastSnapshotId) {
+      super(parent, referred);
+      this.name = name;
+      this.lastSnapshotId = lastSnapshotId;
+      referred.addReference(this);
+    }
     @Override
     public final byte[] getLocalNameBytes() {
       return name;
@@ -438,7 +467,17 @@ public abstract class INodeReference extends INode {
       throw new UnsupportedOperationException("Cannot set name: " + getClass()
           + " is immutable.");
     }
-    
+
+    @Override
+    public INode recordFileModification(Snapshot latest, FileINodeMap inodeMap) throws QuotaExceededException {
+      return null;
+    }
+
+    @Override
+    public INode updateFileModificationTime(long mtime, Snapshot latest, FileINodeMap inodeMap) throws QuotaExceededException {
+      return null;
+    }
+
     public int getLastSnapshotId() {
       return lastSnapshotId;
     }
@@ -562,6 +601,7 @@ public abstract class INodeReference extends INode {
   }
   
   public static class DstReference extends INodeReference {
+
     /**
      * Record the latest snapshot of the dst subtree before the rename. For
      * later operations on the moved/renamed files/directories, if the latest
@@ -585,7 +625,13 @@ public abstract class INodeReference extends INode {
       this.dstSnapshotId = dstSnapshotId;
       referred.addReference(this);
     }
-    
+    public DstReference(FileINodeDirectory parent, WithCount referred,
+                        final int dstSnapshotId) {
+      super(parent, referred);
+      this.dstSnapshotId = dstSnapshotId;
+      referred.addReference(this);
+    }
+
     @Override
     public Quota.Counts cleanSubtree(Snapshot snapshot, Snapshot prior,
         BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes,
@@ -612,7 +658,17 @@ public abstract class INodeReference extends INode {
             collectedBlocks, removedINodes, countDiffChange);
       }
     }
-    
+
+    @Override
+    public INode recordFileModification(Snapshot latest, FileINodeMap inodeMap) throws QuotaExceededException {
+      return null;
+    }
+
+    @Override
+    public INode updateFileModificationTime(long mtime, Snapshot latest, FileINodeMap inodeMap) throws QuotaExceededException {
+      return null;
+    }
+
     /**
      * {@inheritDoc}
      * <br/>

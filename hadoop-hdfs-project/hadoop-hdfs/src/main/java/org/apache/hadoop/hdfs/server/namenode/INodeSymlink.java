@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 public class INodeSymlink extends INodeWithAdditionalFields {
   private final byte[] symlink; // The target URI
 
-  INodeSymlink(long id, byte[] name, PermissionStatus permissions,
+  public INodeSymlink(long id, byte[] name, PermissionStatus permissions,
       long mtime, long atime, String symlink) {
     super(id, name, permissions, mtime, atime);
     this.symlink = DFSUtil.string2Bytes(symlink);
@@ -45,7 +45,7 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   }
 
   @Override
-  INode recordModification(Snapshot latest, final INodeMap inodeMap)
+ public INode recordModification(Snapshot latest, final INodeMap inodeMap)
       throws QuotaExceededException {
     if (isInLatestSnapshot(latest)) {
       INodeDirectory parent = getParent();

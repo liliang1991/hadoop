@@ -55,6 +55,53 @@ public class FileSystemEditLogLoader {
             prog.endStep(Phase.LOADING_EDITS, step);
         }
     }
+
+    public static class EditLogValidation {
+        private final long validLength;
+        private final long endTxId;
+        private final boolean hasCorruptHeader;
+
+       public EditLogValidation(long validLength, long endTxId,
+                          boolean hasCorruptHeader) {
+            this.validLength = validLength;
+            this.endTxId = endTxId;
+            this.hasCorruptHeader = hasCorruptHeader;
+        }
+
+      public   long getValidLength() { return validLength; }
+
+      public   long getEndTxId() { return endTxId; }
+
+      public   boolean hasCorruptHeader() { return hasCorruptHeader; }
+    }
+  public   static EditLogValidation validateEditLog(EditLogInputStream in) {
+        long lastPos = 0;
+        long lastTxId = HdfsConstants.INVALID_TXID;
+        long numValid = 0;
+        FSEditLogOp op = null;
+        while (true) {
+            lastPos = in.getPosition();
+            try {
+                if ((op = in.readOp()) == null) {
+                    break;
+                }
+            } catch (Throwable t) {
+                FSImage.LOG.warn("Caught exception after reading " + numValid +
+                        " ops from " + in + " while determining its valid length." +
+                        "Position was " + lastPos, t);
+                in.resync();
+                FSImage.LOG.warn("After resync, position is " + in.getPosition());
+                continue;
+            }
+            if (lastTxId == HdfsConstants.INVALID_TXID
+                    || op.getTransactionId() > lastTxId) {
+                lastTxId = op.getTransactionId();
+            }
+            numValid++;
+        }
+        return new EditLogValidation(lastPos, lastTxId, false);
+    }
+
     private static Step createStartupProgressStep(EditLogInputStream edits)
             throws IOException {
         long length = edits.length();

@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapsho
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeMap;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -61,7 +62,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
 
   protected static final int DEFAULT_FILES_PER_DIRECTORY = 5;
-  final static byte[] ROOT_NAME = DFSUtil.string2Bytes("");
+ public final static byte[] ROOT_NAME = DFSUtil.string2Bytes("");
 
   private List<INode> children = null;
 
@@ -132,7 +133,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
    * 
    * @return true if the child is removed; false if the child is not found.
    */
-  protected final boolean removeChild(final INode child) {
+  public final boolean removeChild(final INode child) {
     final int i = searchChildren(child.getLocalNameBytes());
     if (i < 0) {
       return false;
@@ -654,6 +655,16 @@ public class INodeDirectory extends INodeWithAdditionalFields
     public SnapshotAndINode(Snapshot snapshot) {
       this(snapshot, snapshot.getRoot());
     }
+  }
+
+  @Override
+  public INode recordFileModification(Snapshot latest, FileINodeMap inodeMap) throws QuotaExceededException {
+    return null;
+  }
+
+  @Override
+  public INode updateModificationTime(long mtime, Snapshot latest, INodeMap inodeMap) throws QuotaExceededException {
+    return null;
   }
 
   public final int getChildrenNum(final Snapshot snapshot) {

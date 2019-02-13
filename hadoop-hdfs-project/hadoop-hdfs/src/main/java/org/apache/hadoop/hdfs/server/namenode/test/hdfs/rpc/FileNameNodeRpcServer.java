@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
-import org.apache.hadoop.hdfs.server.namenode.test.hdfs.NameNodeTest;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.MyNameNode;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.FileNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.protocol.*;
@@ -73,10 +73,10 @@ import static org.apache.hadoop.hdfs.protocol.HdfsConstants.MAX_PATH_LENGTH;
 public class FileNameNodeRpcServer implements NamenodeProtocols {
     private final RPC.Server serviceRpcServer;
     private final InetSocketAddress serviceRPCAddress;
-    private static final Log LOG = NameNodeTest.LOG;
-    private static final Log stateChangeLog = NameNodeTest.stateChangeLog;
-    private static final Log blockStateChangeLog = NameNodeTest.blockStateChangeLog;
-    protected  NameNodeTest nn;
+    private static final Log LOG = MyNameNode.LOG;
+    private static final Log stateChangeLog = MyNameNode.stateChangeLog;
+    private static final Log blockStateChangeLog = MyNameNode.blockStateChangeLog;
+    protected MyNameNode nn;
     protected final FileNamesystem namesystem;
     protected final RPC.Server clientRpcServer;
     boolean serviceAuthEnabled;
@@ -103,11 +103,11 @@ public class FileNameNodeRpcServer implements NamenodeProtocols {
  public    InetSocketAddress getServiceRpcAddress() {
         return serviceRPCAddress;
     }
-    public FileNameNodeRpcServer(Configuration conf, NameNodeTest nn)
+    public FileNameNodeRpcServer(Configuration conf, MyNameNode nn)
             throws IOException {
         this.nn = nn;
         this.namesystem = nn.getNamesystem();
-        this.metrics = NameNodeTest.getNameNodeMetrics();
+        this.metrics = MyNameNode.getNameNodeMetrics();
 
         int handlerCount =
                 conf.getInt(DFS_NAMENODE_HANDLER_COUNT_KEY,
@@ -159,9 +159,50 @@ public class FileNameNodeRpcServer implements NamenodeProtocols {
         WritableRpcEngine.ensureInitialized();
 
         InetSocketAddress serviceRpcAddr = nn.getServiceRpcServerAddress(conf);
+        if (serviceRpcAddr != null) {
+            String bindHost = nn.getServiceRpcServerBindHost(conf);
+            if (bindHost == null) {
+                bindHost = serviceRpcAddr.getHostName();
+            }
+            LOG.info("Service RPC server is binding to " + bindHost + ":" +
+                    serviceRpcAddr.getPort());
 
+            int serviceHandlerCount =
+                    conf.getInt(DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY,
+                            DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT);
+            this.serviceRpcServer = new RPC.Builder(conf)
+                    .setProtocol(
+                            org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB.class)
+                    .setInstance(clientNNPbService)
+                    .setBindAddress(bindHost)
+                    .setPort(serviceRpcAddr.getPort()).setNumHandlers(serviceHandlerCount)
+                    .setVerbose(false)
+                    .setSecretManager(namesystem.getDelegationTokenSecretManager())
+                    .build();
+
+            // Add all the RPC protocols that the namenode implements
+            DFSUtil.addPBProtocol(conf, HAServiceProtocolPB.class, haPbService,
+                    serviceRpcServer);
+            DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, NNPbService,
+                    serviceRpcServer);
+            DFSUtil.addPBProtocol(conf, DatanodeProtocolPB.class, dnProtoPbService,
+                    serviceRpcServer);
+            DFSUtil.addPBProtocol(conf, RefreshAuthorizationPolicyProtocolPB.class,
+                    refreshAuthService, serviceRpcServer);
+            DFSUtil.addPBProtocol(conf, RefreshUserMappingsProtocolPB.class,
+                    refreshUserMappingService, serviceRpcServer);
+            DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class,
+                    getUserMappingService, serviceRpcServer);
+
+            // Update the address with the correct port
+            InetSocketAddress listenAddr = serviceRpcServer.getListenerAddress();
+            serviceRPCAddress = new InetSocketAddress(
+                    serviceRpcAddr.getHostName(), listenAddr.getPort());
+            nn.setRpcServiceServerAddress(conf, serviceRPCAddress);
+        } else {
             serviceRpcServer = null;
             serviceRPCAddress = null;
+        }
         InetSocketAddress rpcAddr = nn.getRpcServerAddress(conf);
         String bindHost = nn.getRpcServerBindHost(conf);
         if (bindHost == null) {
@@ -434,6 +475,9 @@ public class FileNameNodeRpcServer implements NamenodeProtocols {
             throw new UnregisteredNodeException(nodeReg);
         }
     }
+/*
+    定期调用namenode.blockReport()发送block report 告诉NameNode此DataNode上的block信息。
+*/
     @Override
     public DatanodeCommand blockReport(DatanodeRegistration nodeReg, String poolId, StorageBlockReport[] reports) throws IOException {
             verifyRequest(nodeReg);
@@ -972,6 +1016,6 @@ public class FileNameNodeRpcServer implements NamenodeProtocols {
     }
 
     private static UserGroupInformation getRemoteUser() throws IOException {
-        return NameNodeTest.getRemoteUser();
+        return MyNameNode.getRemoteUser();
     }
 }

@@ -112,7 +112,7 @@ public class INodesInPath {
    *        be thrown when the path refers to a symbolic link.
    * @return the specified number of existing INodes in the path
    */
-  static INodesInPath resolve(final INodeDirectory startingDir,
+ public static INodesInPath resolve(final INodeDirectory startingDir,
       final byte[][] components, final int numOfINodes, 
       final boolean resolveLink) throws UnresolvedLinkException {
     Preconditions.checkArgument(startingDir.compareTo(components[0]) == 0);
@@ -291,7 +291,7 @@ public class INodesInPath {
   /**
    * @return the whole inodes array including the null elements.
    */
-  INode[] getINodes() {
+ public INode[] getINodes() {
     if (capacity < inodes.length) {
       INode[] newNodes = new INode[capacity];
       System.arraycopy(inodes, 0, newNodes, 0, capacity);

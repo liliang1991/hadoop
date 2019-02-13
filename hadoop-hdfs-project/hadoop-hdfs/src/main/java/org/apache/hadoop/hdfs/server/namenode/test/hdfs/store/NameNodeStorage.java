@@ -14,6 +14,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.FileSystemImagePreTransactionalStorageInspector;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.FileSystemImageTransactionalStorageInspector;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.FileSystenImage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.PersistentLongFile;
 import org.apache.hadoop.net.DNS;
@@ -149,7 +150,7 @@ public class NameNodeStorage extends  Storage implements Closeable,
              it.hasNext();) {
             StorageDirectory sd = it.next();
             if (!sd.getVersionFile().exists()) {
-                FSImage.LOG.warn("Storage directory " + sd + " contains no VERSION file. Skipping...");
+                FileSystenImage.LOG.warn("Storage directory " + sd + " contains no VERSION file. Skipping...");
                 continue;
             }
             readProperties(sd); // sets layoutVersion
@@ -240,13 +241,12 @@ public class NameNodeStorage extends  Storage implements Closeable,
 
     @Override
     public Iterator<StorageDirectory> dirIterator() {
-        return super.dirIterator();
+        return dirIterator(null);
     }
 
     @Override
     public Iterator<StorageDirectory> dirIterator(StorageDirType dirType) {
-        return super.dirIterator(dirType);
-    }
+        return new DirIterator(dirType);    }
 
     @Override
     public Iterable<StorageDirectory> dirIterable(StorageDirType dirType) {
@@ -500,6 +500,8 @@ public class NameNodeStorage extends  Storage implements Closeable,
 
   public   void reportErrorsOnDirectories(List<StorageDirectory> sds) {
         for (StorageDirectory sd : sds) {
+            reportErrorsOnDirectory(sd);
+
         }
     }
    public static File getStorageFile(StorageDirectory sd, NameNodeFile type, long imageTxId) {
@@ -593,7 +595,7 @@ public class NameNodeStorage extends  Storage implements Closeable,
         String bpid = "BP-" + rand + "-"+ ip + "-" + Time.now();
         return bpid;
     }
-    void setBlockPoolID(String bpid) {
+  public   void setBlockPoolID(String bpid) {
         blockpoolID = bpid;
     }
 

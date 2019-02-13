@@ -12,7 +12,10 @@ import org.apache.hadoop.util.LightWeightGSet;
 
 import java.io.PrintWriter;
 import java.util.List;
-
+/*
+  INodeDirectoryWithQuota类继承于INodeDirectory类，
+  管理员可以配置目录的配额。既可以配置目录下的名字数量，也可以配置子目录下的所有文件的空间配额
+ */
 public class FileINodeDirectoryWithQuota extends FileINodeDirectory {
     /** Name space quota */
     private long nsQuota = Long.MAX_VALUE;
@@ -44,91 +47,58 @@ public class FileINodeDirectoryWithQuota extends FileINodeDirectory {
         super(id, name, permissions, 0L);
     }
 
-    @Override
-    public ReadOnlyList<INode> getChildrenList(Snapshot snapshot) {
-        return super.getChildrenList(snapshot);
-    }
 
-    @Override
-    public Quota.Counts cleanSubtree(Snapshot snapshot, Snapshot prior, BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes, boolean countDiffChange) throws QuotaExceededException {
-        return super.cleanSubtree(snapshot, prior, collectedBlocks, removedINodes, countDiffChange);
-    }
 
-    @Override
-    public void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes) {
-        super.destroyAndCollectBlocks(collectedBlocks, removedINodes);
-    }
 
     @Override
     public Content.Counts computeContentSummary(Content.Counts counts) {
-        return super.computeContentSummary(counts);
+        final long original = counts.get(Content.DISKSPACE);
+        super.computeContentSummary(counts);
+        checkDiskspace(counts.get(Content.DISKSPACE) - original);
+        return counts;
     }
-
+    private void checkDiskspace(final long computed) {
+        if (-1 != getDsQuota() && diskspace != computed) {
+            NameNode.LOG.error("BUG: Inconsistent diskspace for directory "
+                    + getFullPathName() + ". Cached = " + diskspace
+                    + " != Computed = " + computed);
+        }
+    }
     @Override
     public Quota.Counts computeQuotaUsage(Quota.Counts counts, boolean useCache, int lastSnapshotId) {
-        return super.computeQuotaUsage(counts, useCache, lastSnapshotId);
-    }
-
-    @Override
-    public boolean metadataEquals(FileINodeDirectoryAttributes other) {
-        return super.metadataEquals(other);
-    }
-
-    @Override
-    public void setNext(LightWeightGSet.LinkedElement next) {
-        super.setNext(next);
-    }
-
-    @Override
-    public LightWeightGSet.LinkedElement getNext() {
-        return super.getNext();
-    }
-
-    @Override
-    public long getPermissionLong() {
-        return super.getPermissionLong();
-    }
-
-    @Override
-    public INodeAttributes getSnapshotINode(Snapshot snapshot) {
-        return super.getSnapshotINode(snapshot);
-    }
-
-    @Override
-    public boolean isReference() {
-        return super.isReference();
-    }
-
-    @Override
-    public INodeReference asReference() {
-        return super.asReference();
-    }
-
-    @Override
-    public boolean isFile() {
-        return super.isFile();
-    }
-
-    @Override
-    public INodeFile asFile() {
-        return super.asFile();
+        if (useCache && isQuotaSet()) {
+            // use cache value
+            counts.add(Quota.NAMESPACE, namespace);
+            counts.add(Quota.DISKSPACE, diskspace);
+        } else {
+            super.computeQuotaUsage(counts, false, lastSnapshotId);
+        }
+        return counts;
     }
 
 
 
-    @Override
-    public boolean isSymlink() {
-        return super.isSymlink();
-    }
 
-    @Override
-    public INodeSymlink asSymlink() {
-        return super.asSymlink();
-    }
+
 
     @Override
     public void addSpaceConsumed(long nsDelta, long dsDelta, boolean verify) throws QuotaExceededException {
-        super.addSpaceConsumed(nsDelta, dsDelta, verify);
+        if (isQuotaSet()) {
+            // The following steps are important:
+            // check quotas in this inode and all ancestors before changing counts
+            // so that no change is made if there is any quota violation.
+
+            // (1) verify quota in this inode
+            if (verify) {
+                verifyQuota(nsDelta, dsDelta);
+            }
+            // (2) verify quota and then add count in ancestors
+            super.addSpaceConsumed(nsDelta, dsDelta, verify);
+            // (3) add count in this inode
+            addSpaceConsumed2Cache(nsDelta, dsDelta);
+        } else {
+            super.addSpaceConsumed(nsDelta, dsDelta, verify);
+        }
     }
 
     @Override
@@ -141,59 +111,22 @@ public class FileINodeDirectoryWithQuota extends FileINodeDirectory {
         return dsQuota;
     }
 
-    @Override
-    public String getFullPathName() {
-        return super.getFullPathName();
-    }
 
-    @Override
-    public String toString() {
-        return super.toString();
-    }
 
-    @Override
-    public String toDetailString() {
-        return super.toDetailString();
-    }
 
-    @Override
-    public INodeReference getParentReference() {
-        return super.getParentReference();
-    }
 
-    @Override
-    public void clear() {
-        super.clear();
-    }
 
-    @Override
-    public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix, Snapshot snapshot) {
-        super.dumpTreeRecursively(out, prefix, snapshot);
-    }
-
-    @Override
-    protected Object clone() throws CloneNotSupportedException {
-        return super.clone();
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
-        super.finalize();
-    }
     public void setQuota(long nsQuota, long dsQuota) {
         this.nsQuota = nsQuota;
         this.dsQuota = dsQuota;
     }
 
-    @Override
+  /*  @Override
     public INode recordFileModification(Snapshot latest, FileINodeMap inodeMap) throws QuotaExceededException {
         return null;
-    }
+    }*/
 
-    @Override
-    public INode updateModificationTime(long mtime, Snapshot latest, INodeMap inodeMap) throws QuotaExceededException {
-        return null;
-    }
+
    public void verifyQuota(long nsDelta, long dsDelta) throws QuotaExceededException {
         verifyNamespaceQuota(nsDelta);
 
@@ -217,5 +150,15 @@ public class FileINodeDirectoryWithQuota extends FileINodeDirectory {
    public long numItemsInTree() {
         return namespace;
     }
+    String namespaceString() {
+        return "namespace: " + (nsQuota < 0? "-": namespace + "/" + nsQuota);
+    }
+    String diskspaceString() {
+        return "diskspace: " + (dsQuota < 0? "-": diskspace + "/" + dsQuota);
+    }
+    String quotaString() {
+        return ", Quota[" + namespaceString() + ", " + diskspaceString() + "]";
+    }
+
 
 }

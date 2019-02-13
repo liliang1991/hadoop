@@ -650,7 +650,7 @@ public class NNStorage extends Storage implements Closeable,
    * Get a storage file for one of the files that doesn't need a txid associated
    * (e.g version, seen_txid)
    */
-  static File getStorageFile(StorageDirectory sd, NameNodeFile type) {
+ public static File getStorageFile(StorageDirectory sd, NameNodeFile type) {
     return new File(sd.getCurrentDir(), type.getName());
   }
 

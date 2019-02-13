@@ -14,7 +14,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.*;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
-import org.apache.hadoop.hdfs.server.namenode.test.hdfs.NameNodeTest;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.journal.FileJournalSet;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.store.NameNodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
@@ -90,7 +89,7 @@ public class FileSystemEditLog implements LogsPurgeable {
         isSyncRunning = false;
         this.conf = conf;
         this.storage = storage;
-        //  metrics = NameNodeTest.getNameNodeMetrics();
+        //  metrics = MyNameNode.getNameNodeMetrics();
         lastPrintTime = now();
 
         // If this list is empty, an error will be thrown on first use
@@ -522,6 +521,7 @@ public class FileSystemEditLog implements LogsPurgeable {
         try {
             editLogStream = journalSet.startLogSegment(segmentTxId);
         } catch (IOException ex) {
+            ex.printStackTrace();
             throw new IOException("Unable to start log segment " +
                     segmentTxId + ": too few journals successfully started.", ex);
         }
@@ -541,7 +541,7 @@ public class FileSystemEditLog implements LogsPurgeable {
                 "Bad state: %s", state);
 
         long segmentTxId = getLastWrittenTxId() + 1;
-        // Safety check: we should never start a segment if there are
+        // Safety check: we should never stFileSystemEditLogart a segment if there are
         // newer txids readable.
         List<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
         journalSet.selectInputStreams(streams, segmentTxId, true, true);
@@ -561,6 +561,18 @@ public class FileSystemEditLog implements LogsPurgeable {
         Preconditions.checkState(isSegmentOpen(),
                 "Bad state: %s", state);
         return curSegmentTxId;
+    }
+    public synchronized void initSharedJournalsForRead() {
+        if (state ==State.OPEN_FOR_READING) {
+            LOG.warn("Initializing shared journals for READ, already open for READ",
+                    new Exception());
+            return;
+        }
+        Preconditions.checkState(state == State.UNINITIALIZED ||
+                state == State.CLOSED);
+
+        initJournals(this.sharedEditsDirs);
+        state = State.OPEN_FOR_READING;
     }
 
     synchronized long rollEditLog() throws IOException {
@@ -881,4 +893,36 @@ public class FileSystemEditLog implements LogsPurgeable {
             journalSet.remove(bjm);
         }
     }
+
+    synchronized void close() {
+        if (state == State.CLOSED) {
+            LOG.debug("Closing log when already closed");
+            return;
+        }
+
+        try {
+            if (state == State.IN_SEGMENT) {
+                assert editLogStream != null;
+                waitForSyncToFinish();
+                endCurrentLogSegment(true);
+            }
+        } finally {
+            if (journalSet != null && !journalSet.isEmpty()) {
+                try {
+                    journalSet.close();
+                } catch (IOException ioe) {
+                    LOG.warn("Error closing journalSet", ioe);
+                }
+            }
+            state = State.CLOSED;
+        }
+    }
+    synchronized void waitForSyncToFinish() {
+        while (isSyncRunning) {
+            try {
+                wait(1000);
+            } catch (InterruptedException ie) {}
+        }
+    }
+
 }
