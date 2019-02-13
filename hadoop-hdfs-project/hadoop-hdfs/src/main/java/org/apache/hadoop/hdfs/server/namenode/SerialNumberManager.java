@@ -23,9 +23,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 /** Manage name-to-serial-number maps for users and groups. */
-class SerialNumberManager {
+public class SerialNumberManager {
   /** This is the only instance of {@link SerialNumberManager}.*/
-  static final SerialNumberManager INSTANCE = new SerialNumberManager();
+  public static final SerialNumberManager INSTANCE = new SerialNumberManager();
 
   private SerialNumberMap<String> usermap = new SerialNumberMap<String>();
   private SerialNumberMap<String> groupmap = new SerialNumberMap<String>();
@@ -34,8 +34,8 @@ class SerialNumberManager {
 
   int getUserSerialNumber(String u) {return usermap.get(u);}
   int getGroupSerialNumber(String g) {return groupmap.get(g);}
-  String getUser(int n) {return usermap.get(n);}
-  String getGroup(int n) {return groupmap.get(n);}
+ public String getUser(int n) {return usermap.get(n);}
+  public String getGroup(int n) {return groupmap.get(n);}
 
   {
     getUserSerialNumber(null);
