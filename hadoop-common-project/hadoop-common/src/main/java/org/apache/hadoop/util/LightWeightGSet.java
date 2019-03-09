@@ -139,26 +139,36 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
   @Override
   public E put(final E element) {
     //validate element
+    //	// 检验元素element
+    //
+    //	// 不支持null元素
     if (element == null) {
       throw new NullPointerException("Null element is not supported.");
     }
+    // 元素必须实现LinkedElement接口
     if (!(element instanceof LinkedElement)) {
       throw new HadoopIllegalArgumentException(
           "!(element instanceof LinkedElement), element.getClass()="
           + element.getClass());
     }
     final LinkedElement e = (LinkedElement)element;
-
+    //find index
+    // 获取元素对应索引
+    // 实际上是根据block的hashCode和hash_mask的一种循环取余算法
+    // blockID是一个递增的序列，它在数组内的index也是在数组长度范围内递增的
     //find index
     final int index = getIndex(element);
 
     //remove if it already exists
     final E existing = remove(index, element);
-
+//              modification代表了数据修改量，无论增加还是删除，均会累加；
     //insert the element to the head of the linked list
     modification++;
     size++;
+    // 元素设置
+    // 将e的next元素设置为数组当前index位置的元素
     e.setNext(entries[index]);
+    //    // 将e的next元素设置为数组当前index位置的元素
     entries[index] = e;
 
     return existing;
