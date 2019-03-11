@@ -32,6 +32,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeDirectorySnapshottable;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.FileImageFormat;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 /** Snapshot of a sub-tree in the namesystem. */
@@ -66,7 +69,7 @@ public class Snapshot implements Comparable<byte[]> {
    * @param s The given snapshot.
    * @return The name of the snapshot, or an empty string if {@code s} is null
    */
-  static String getSnapshotName(Snapshot s) {
+ public static String getSnapshotName(Snapshot s) {
     return s != null ? s.getRoot().getLocalName() : "";
   }
 
@@ -126,15 +129,22 @@ public class Snapshot implements Comparable<byte[]> {
     return latest;
   }
   
-  static Snapshot read(DataInput in, FSImageFormat.Loader loader)
+ public static Snapshot read(DataInput in, FSImageFormat.Loader loader)
       throws IOException {
     final int snapshotId = in.readInt();
     final INode root = loader.loadINodeWithLocalName(false, in, false);
     return new Snapshot(snapshotId, root.asDirectory(), null);
   }
 
+    public static Snapshot readFile(DataInput in, FileImageFormat.Loader loader)
+            throws IOException {
+        final int snapshotId = in.readInt();
+        final INode root = loader.loadINodeWithLocalName(false, in, false);
+        return new Snapshot(snapshotId, root.asDirectory(), null);
+    }
+
   /** The root directory of the snapshot. */
-  static public class Root extends INodeDirectory {
+   static public class Root extends INodeDirectory {
     Root(INodeDirectory other) {
       super(other, false);
     }
@@ -154,16 +164,39 @@ public class Snapshot implements Comparable<byte[]> {
       return getSnapshotPath(getParent().getFullPathName(), getLocalName());
     }
   }
+    static public class FileRoot extends FileINodeDirectory {
+      public   FileRoot(FileINodeDirectory other) {
+            super(other, false);
+        }
 
+        @Override
+        public ReadOnlyList<INode> getChildrenList(Snapshot snapshot) {
+            return getParent().getChildrenList(snapshot);
+        }
+
+        @Override
+        public INode getChild(byte[] name, Snapshot snapshot) {
+            return getParent().getChild(name, snapshot);
+        }
+
+        @Override
+        public String getFullPathName() {
+            return getSnapshotPath(getParent().getFullPathName(), getLocalName());
+        }
+    }
   /** Snapshot ID. */
   private final int id;
   /** The root directory of the snapshot. */
-  private final Root root;
-
-  Snapshot(int id, String name, INodeDirectorySnapshottable dir) {
+  private  Root root;
+    FileRoot fileRoot;
+ public Snapshot(int id, String name, INodeDirectorySnapshottable dir) {
     this(id, dir, dir);
     this.root.setLocalName(DFSUtil.string2Bytes(name));
   }
+    public Snapshot(int id, String name, FileINodeDirectorySnapshottable dir) {
+        this(id, dir, dir);
+        this.root.setLocalName(DFSUtil.string2Bytes(name));
+    }
 
   Snapshot(int id, INodeDirectory dir, INodeDirectorySnapshottable parent) {
     this.id = id;
@@ -171,7 +204,12 @@ public class Snapshot implements Comparable<byte[]> {
 
     this.root.setParent(parent);
   }
-  
+    Snapshot(int id, FileINodeDirectory dir, FileINodeDirectorySnapshottable parent) {
+        this.id = id;
+        this.fileRoot = new FileRoot(dir);
+
+        this.fileRoot.setFileParent(parent);
+    }
   public int getId() {
     return id;
   }
@@ -180,7 +218,9 @@ public class Snapshot implements Comparable<byte[]> {
   public Root getRoot() {
     return root;
   }
-
+    public FileRoot getFileRoot() {
+        return fileRoot;
+    }
   @Override
   public int compareTo(byte[] bytes) {
     return root.compareTo(bytes);
@@ -207,7 +247,7 @@ public class Snapshot implements Comparable<byte[]> {
   }
   
   /** Serialize the fields to out */
-  void write(DataOutput out) throws IOException {
+ public void write(DataOutput out) throws IOException {
     out.writeInt(id);
     // write root
     FSImageSerialization.writeINodeDirectory(root, out);

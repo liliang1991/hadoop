@@ -68,7 +68,7 @@ public class FileLeaseManager {
 
    public class Lease implements Comparable<Lease> {
         // // 租约持有者
-        private final String holder;\
+        private final String holder;
        // 最近更新时间
         private long lastUpdate;
         //// 当前租约持有者打开的文件

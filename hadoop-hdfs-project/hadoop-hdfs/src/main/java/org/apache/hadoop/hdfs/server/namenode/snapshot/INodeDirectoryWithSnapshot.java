@@ -257,7 +257,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
     
     @Override
-    Quota.Counts combinePosteriorAndCollectBlocks(
+  public   Quota.Counts combinePosteriorAndCollectBlocks(
         final INodeDirectory currentDir, final DirectoryDiff posterior,
         final BlocksMapUpdateInfo collectedBlocks,
         final List<INode> removedINodes) {
@@ -342,7 +342,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
     
     @Override
-    void write(DataOutput out, ReferenceMap referenceMap) throws IOException {
+  public   void write(DataOutput out, ReferenceMap referenceMap) throws IOException {
       writeSnapshot(out);
       out.writeInt(childrenSize);
 
@@ -363,7 +363,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
     }
 
     @Override
-    Quota.Counts destroyDiffAndCollectBlocks(INodeDirectory currentINode,
+  public   Quota.Counts destroyDiffAndCollectBlocks(INodeDirectory currentINode,
         BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
       // this diff has been deleted
       Quota.Counts counts = Quota.Counts.newInstance();
@@ -377,12 +377,12 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       extends AbstractINodeDiffList<INodeDirectory, INodeDirectoryAttributes, DirectoryDiff> {
 
     @Override
-    DirectoryDiff createDiff(Snapshot snapshot, INodeDirectory currentDir) {
+   public DirectoryDiff createDiff(Snapshot snapshot, INodeDirectory currentDir) {
       return new DirectoryDiff(snapshot, currentDir);
     }
 
     @Override
-    INodeDirectoryAttributes createSnapshotCopy(INodeDirectory currentDir) {
+  public   INodeDirectoryAttributes createSnapshotCopy(INodeDirectory currentDir) {
       return currentDir.isQuotaSet()?
           new INodeDirectoryAttributes.CopyWithQuota(currentDir)
         : new INodeDirectoryAttributes.SnapshotCopy(currentDir);

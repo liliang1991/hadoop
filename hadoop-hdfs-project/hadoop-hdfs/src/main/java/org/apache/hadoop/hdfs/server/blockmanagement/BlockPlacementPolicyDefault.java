@@ -126,7 +126,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   }
 
   @Override
-  DatanodeDescriptor[] chooseTarget(String src, int numOfReplicas,
+ public DatanodeDescriptor[] chooseTarget(String src, int numOfReplicas,
       DatanodeDescriptor writer, HashMap<Node, Node> excludedNodes,
       long blocksize, List<DatanodeDescriptor> favoredNodes) {
     try {

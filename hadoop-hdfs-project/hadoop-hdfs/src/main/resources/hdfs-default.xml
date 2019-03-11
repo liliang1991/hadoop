@@ -233,7 +233,7 @@
 
 <property>
   <name>dfs.namenode.name.dir</name>
-  <value>file://${hadoop.tmp.dir}/dfs/name</value>
+  <value>/home/moon/hadoop/tmp/dfs/name</value>
   <description>Determines where on the local filesystem the DFS name node
       should store the name table(fsimage).  If this is a comma-delimited list
       of directories then the name table is replicated in all of the
@@ -357,7 +357,7 @@
 
 <property>
   <name>dfs.datanode.data.dir</name>
-  <value>file://${hadoop.tmp.dir}/dfs/data</value>
+  <value>/home/moon/hadoop/tmp/dfs/data</value>
   <description>Determines where on the local filesystem an DFS data node
   should store its blocks.  If this is a comma-delimited
   list of directories, then data will be stored in all named
@@ -648,7 +648,7 @@
 
 <property>
   <name>dfs.namenode.checkpoint.dir</name>
-  <value>file://${hadoop.tmp.dir}/dfs/namesecondary</value>
+  <value>/home/moon/hadoop/tmp/dfs/namesecondary</value>
   <description>Determines where on the local filesystem the DFS secondary
       name node should store the temporary images to merge.
       If this is a comma-delimited list of directories then the image is
@@ -1415,4 +1415,10 @@
 	  linearly increases.
 	</description>
 </property>
+  <property>
+
+    <name>fs.defaultFS</name>
+    <value>hdfs://localhost:9000</value>
+
+  </property>
 </configuration>

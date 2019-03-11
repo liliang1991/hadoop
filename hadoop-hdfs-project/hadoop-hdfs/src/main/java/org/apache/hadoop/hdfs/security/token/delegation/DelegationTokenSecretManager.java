@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.FileNamesystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.Credentials;
@@ -57,8 +58,8 @@ public class DelegationTokenSecretManager
   private static final Log LOG = LogFactory
       .getLog(DelegationTokenSecretManager.class);
   
-  private final FSNamesystem namesystem;
-
+  private FSNamesystem namesystem;
+  FileNamesystem fileNamesystem;
   public DelegationTokenSecretManager(long delegationKeyUpdateInterval,
       long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
       long delegationTokenRemoverScanInterval, FSNamesystem namesystem) {
@@ -87,7 +88,15 @@ public class DelegationTokenSecretManager
     this.namesystem = namesystem;
     this.storeTokenTrackingId = storeTokenTrackingId;
   }
-
+  public DelegationTokenSecretManager(long delegationKeyUpdateInterval,
+                                      long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
+                                      long delegationTokenRemoverScanInterval, boolean storeTokenTrackingId,
+                                      FileNamesystem namesystem) {
+    super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
+            delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
+    this.fileNamesystem= namesystem;
+    this.storeTokenTrackingId = storeTokenTrackingId;
+  }
   @Override //SecretManager
   public DelegationTokenIdentifier createIdentifier() {
     return new DelegationTokenIdentifier();

@@ -180,7 +180,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    * the client or it does not have at least a minimal number of replicas 
    * reported from data-nodes. 
    */
-  BlockInfo convertToCompleteBlock() throws IOException {
+ public BlockInfo convertToCompleteBlock() throws IOException {
     assert getBlockUCState() != BlockUCState.COMPLETE :
       "Trying to convert a COMPLETE block";
     return new BlockInfo(this);
@@ -236,7 +236,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    * @param block - contains client reported block length and generation 
    * @throws IOException if block ids are inconsistent.
    */
-  void commitBlock(Block block) throws IOException {
+ public void commitBlock(Block block) throws IOException {
     if(getBlockId() != block.getBlockId())
       throw new IOException("Trying to commit inconsistent block: id = "
           + block.getBlockId() + ", expected id = " + getBlockId());
@@ -293,7 +293,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     }
   }
 
-  void addReplicaIfNotPresent(DatanodeDescriptor dn,
+ public void addReplicaIfNotPresent(DatanodeDescriptor dn,
                      Block block,
                      ReplicaState rState) {
     for(ReplicaUnderConstruction r : replicas)

@@ -236,7 +236,7 @@ Release 2.1.0-beta - 2013-08-22
     HDFS-4305. Add a configurable limit on number of blocks per file, and min
     block size. (Andrew Wang via atm)
 
-    HDFS-4434. Provide a mapping from INodeId to INode. (suresh)
+    HDFS-4434. Provide a mapping from FileINodeId to FileINode. (suresh)
 
     HDFS-2802. Add HDFS Snapshot feature.  (See breakdown of tasks below for
     subtasks and contributors)

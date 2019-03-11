@@ -83,7 +83,7 @@ public class CorruptReplicasMap{
    *
    * @param blk Block to be removed
    */
-  void removeFromCorruptReplicasMap(Block blk) {
+ public void removeFromCorruptReplicasMap(Block blk) {
     if (corruptReplicasMap != null) {
       corruptReplicasMap.remove(blk);
     }
@@ -96,7 +96,7 @@ public class CorruptReplicasMap{
    * @return true if the removal is successful; 
              false if the replica is not in the map
    */ 
-  boolean removeFromCorruptReplicasMap(Block blk, DatanodeDescriptor datanode) {
+ public boolean removeFromCorruptReplicasMap(Block blk, DatanodeDescriptor datanode) {
     Collection<DatanodeDescriptor> datanodes = corruptReplicasMap.get(blk);
     if (datanodes==null)
       return false;
@@ -117,7 +117,7 @@ public class CorruptReplicasMap{
    * @param blk Block for which nodes are requested
    * @return collection of nodes. Null if does not exists
    */
-  Collection<DatanodeDescriptor> getNodes(Block blk) {
+public   Collection<DatanodeDescriptor> getNodes(Block blk) {
     return corruptReplicasMap.get(blk);
   }
 
@@ -128,7 +128,7 @@ public class CorruptReplicasMap{
    * @param node DatanodeDescriptor which holds the replica
    * @return true if replica is corrupt, false if does not exists in this map
    */
-  boolean isReplicaCorrupt(Block blk, DatanodeDescriptor node) {
+public   boolean isReplicaCorrupt(Block blk, DatanodeDescriptor node) {
     Collection<DatanodeDescriptor> nodes = getNodes(blk);
     return ((nodes != null) && (nodes.contains(node)));
   }

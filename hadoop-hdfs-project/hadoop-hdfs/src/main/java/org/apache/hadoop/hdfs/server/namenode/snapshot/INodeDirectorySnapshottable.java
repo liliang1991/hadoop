@@ -174,7 +174,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   /**
    * @return {@link #snapshotsByNames}
    */
-  ReadOnlyList<Snapshot> getSnapshotsByNames() {
+ public ReadOnlyList<Snapshot> getSnapshotsByNames() {
     return ReadOnlyList.Util.asReadOnlyList(this.snapshotsByNames);
   }
   
@@ -361,7 +361,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
    *           point, or if endSnapshotName is not null but cannot be identified
    *           as a previous snapshot.
    */
-  SnapshotDiffInfo computeDiff(final String from, final String to)
+ public SnapshotDiffInfo computeDiff(final String from, final String to)
       throws SnapshotException {
     Snapshot fromSnapshot = getSnapshotByName(from);
     Snapshot toSnapshot = getSnapshotByName(to);

@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SnapshotDiffInfo;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.FileImageFormat;
 
 /**
  * Manage snapshottable directories and their snapshots.
@@ -303,7 +304,19 @@ public class SnapshotManager implements SnapshotStats {
     }
     return snapshotMap;
   }
-  
+  public Map<Integer, Snapshot> readFile(DataInput in, FileImageFormat.Loader loader
+  ) throws IOException {
+    snapshotCounter = in.readInt();
+    numSnapshots.set(in.readInt());
+
+    // read snapshots
+    final Map<Integer, Snapshot> snapshotMap = new HashMap<Integer, Snapshot>();
+    for(int i = 0; i < numSnapshots.get(); i++) {
+      final Snapshot s = Snapshot.readFile(in, loader);
+      snapshotMap.put(s.getId(), s);
+    }
+    return snapshotMap;
+  }
   /**
    * List all the snapshottable directories that are owned by the current user.
    * @param userName Current user name.

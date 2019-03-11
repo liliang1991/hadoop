@@ -75,7 +75,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * This is used to convert BlockInfoUnderConstruction
    * @param from BlockInfo to copy from.
    */
-  protected BlockInfo(BlockInfo from) {
+  public BlockInfo(BlockInfo from) {
     this(from, from.bc.getBlockReplication());
     this.bc = from.bc;
   }
@@ -88,7 +88,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     this.bc = bc;
   }
 
-  DatanodeDescriptor getDatanode(int index) {
+ public DatanodeDescriptor getDatanode(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3 < triplets.length : "Index is out of bound";
     return (DatanodeDescriptor)triplets[index*3];
@@ -104,7 +104,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     return info;
   }
 
-  BlockInfo getNext(int index) {
+ public BlockInfo getNext(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
     BlockInfo info = (BlockInfo)triplets[index*3+2];
@@ -156,7 +156,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     return info;
   }
 
-  int getCapacity() {
+  public   int getCapacity() {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert triplets.length % 3 == 0 : "Malformed BlockInfo";
     return triplets.length / 3;
@@ -228,7 +228,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * @param dn
    * @return index or -1 if not found.
    */
-  int findDatanode(DatanodeDescriptor dn) {
+ public int findDatanode(DatanodeDescriptor dn) {
     int len = getCapacity();
     for(int idx = 0; idx < len; idx++) {
       DatanodeDescriptor cur = getDatanode(idx);

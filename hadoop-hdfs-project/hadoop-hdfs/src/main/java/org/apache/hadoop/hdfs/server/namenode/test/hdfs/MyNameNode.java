@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.FileNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.FileSystenImage;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.rpc.FileNameNodeHttpServer;
 import org.apache.hadoop.hdfs.server.namenode.test.hdfs.rpc.FileNameNodeRpcServer;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
@@ -143,11 +144,16 @@ public class MyNameNode {
     }
     private void startCommonServices(Configuration conf) throws IOException {
         namesystem.startCommonServices(conf, haContext);
-    /*    if (NamenodeRole.NAMENODE != role) {
-            startHttpServer(conf);
-            httpServer.setNameNodeAddress(getNameNodeAddress());
-            httpServer.setFSImage(getFSImage());
+      /*  try {
+            if (NamenodeRole.NAMENODE != role) {
+                startHttpServer(conf);
+                httpServer.setNameNodeAddress(getNameNodeAddress());
+                httpServer.setFSImage(getFSImage());
+            }
+        }catch (IOException e){
+            e.printStackTrace();
         }*/
+
         rpcServer.start();
         plugins = conf.getInstances(DFS_NAMENODE_PLUGINS_KEY,
                 ServicePlugin.class);
@@ -164,6 +170,21 @@ public class MyNameNode {
                     + rpcServer.getServiceRpcAddress());
         }
     }
+
+  public   synchronized HAServiceProtocol.HAServiceState getServiceState() {
+        if (state == null) {
+            return HAServiceProtocol.HAServiceState.INITIALIZING;
+        }
+        return state.getServiceState();
+    }
+    public String getNameNodeAddressHostPortString() {
+        return NetUtils.getHostPortString(rpcServer.getRpcAddress());
+    }
+
+    public NamenodeProtocols getRpcServer() {
+        return rpcServer;
+    }
+
     private void startHttpServer(final Configuration conf) throws IOException {
         httpServer = new FileNameNodeHttpServer(conf, this, getHttpServerAddress(conf));
         httpServer.start();

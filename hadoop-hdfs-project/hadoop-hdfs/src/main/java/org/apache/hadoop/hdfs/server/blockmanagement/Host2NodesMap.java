@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 /** A map from host names to datanode descriptors. */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-class Host2NodesMap {
+public class Host2NodesMap {
   private HashMap<String, DatanodeDescriptor[]> map
     = new HashMap<String, DatanodeDescriptor[]>();
   private ReadWriteLock hostmapLock = new ReentrantReadWriteLock();
@@ -61,7 +61,7 @@ class Host2NodesMap {
   /** add node to the map 
    * return true if the node is added; false otherwise.
    */
-  boolean add(DatanodeDescriptor node) {
+  public boolean add(DatanodeDescriptor node) {
     hostmapLock.writeLock().lock();
     try {
       if (node==null || contains(node)) {
@@ -89,7 +89,7 @@ class Host2NodesMap {
   /** remove node from the map 
    * return true if the node is removed; false otherwise.
    */
-  boolean remove(DatanodeDescriptor node) {
+ public boolean remove(DatanodeDescriptor node) {
     if (node==null) {
       return false;
     }
@@ -136,7 +136,7 @@ class Host2NodesMap {
    * Get a data node by its IP address.
    * @return DatanodeDescriptor if found, null otherwise 
    */
-  DatanodeDescriptor getDatanodeByHost(String ipAddr) {
+ public DatanodeDescriptor getDatanodeByHost(String ipAddr) {
     if (ipAddr == null) {
       return null;
     }

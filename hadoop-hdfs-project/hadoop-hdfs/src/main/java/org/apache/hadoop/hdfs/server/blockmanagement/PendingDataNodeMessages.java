@@ -32,7 +32,7 @@ import com.google.common.collect.Maps;
  * they have an outdated state in the namespace. In those cases,
  * we queue those block-related messages in this structure.
  * */  
-class PendingDataNodeMessages {
+public class PendingDataNodeMessages {
   
   Map<Block, Queue<ReportedBlockInfo>> queueByBlockId =
     Maps.newHashMap();
@@ -70,7 +70,7 @@ class PendingDataNodeMessages {
     }
   }
   
-  void enqueueReportedBlock(DatanodeDescriptor dn, Block block,
+  public void enqueueReportedBlock(DatanodeDescriptor dn, Block block,
       ReplicaState reportedState) {
     block = new Block(block);
     getBlockQueue(block).add(

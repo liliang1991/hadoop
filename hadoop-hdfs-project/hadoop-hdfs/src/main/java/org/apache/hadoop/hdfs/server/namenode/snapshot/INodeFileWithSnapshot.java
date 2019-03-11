@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeMap;
 
 /**
  * Represent an {@link INodeFile} that is snapshotted.
@@ -79,7 +80,14 @@ public class INodeFileWithSnapshot extends INodeFile
     }
     return this;
   }
-
+  @Override
+  public INodeFileWithSnapshot recordFileModification(final Snapshot latest,
+                                                  final FileINodeMap inodeMap) throws QuotaExceededException {
+    if (isInLatestSnapshot(latest) && !shouldRecordInSrcSnapshot(latest)) {
+      diffs.saveSelf2Snapshot(latest, this, null);
+    }
+    return this;
+  }
   @Override
   public INodeFile asINodeFile() {
     return this;

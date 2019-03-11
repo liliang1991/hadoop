@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.block.FileINodeMap;
 
 /**
  * Represent an {@link INodeFileUnderConstruction} that is snapshotted.
@@ -59,7 +60,7 @@ public class INodeFileUnderConstructionWithSnapshot
   }
   
   @Override
-  protected INodeFileWithSnapshot toINodeFile(final long mtime) {
+  public INodeFileWithSnapshot toINodeFile(final long mtime) {
     assertAllBlocksComplete();
     final long atime = getModificationTime();
     final INodeFileWithSnapshot f = new INodeFileWithSnapshot(this, getDiffs());
@@ -92,7 +93,15 @@ public class INodeFileUnderConstructionWithSnapshot
     }
     return this;
   }
-
+  @Override
+  public INodeFileUnderConstructionWithSnapshot recordFileModification(
+          final Snapshot latest, final FileINodeMap inodeMap)
+          throws QuotaExceededException {
+    if (isInLatestSnapshot(latest) && !shouldRecordInSrcSnapshot(latest)) {
+      diffs.saveSelf2Snapshot(latest, this, null);
+    }
+    return this;
+  }
   @Override
   public INodeFile asINodeFile() {
     return this;

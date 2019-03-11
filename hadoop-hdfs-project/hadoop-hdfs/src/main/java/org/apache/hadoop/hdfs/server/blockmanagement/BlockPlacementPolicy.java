@@ -126,7 +126,7 @@ public abstract class BlockPlacementPolicy {
    *          is only a hint and due to cluster state, namenode may not be 
    *          able to place the blocks on these datanodes.
    */
-  DatanodeDescriptor[] chooseTarget(String src,
+public   DatanodeDescriptor[] chooseTarget(String src,
       int numOfReplicas, DatanodeDescriptor writer,
       HashMap<Node, Node> excludedNodes,
       long blocksize, List<DatanodeDescriptor> favoredNodes) {

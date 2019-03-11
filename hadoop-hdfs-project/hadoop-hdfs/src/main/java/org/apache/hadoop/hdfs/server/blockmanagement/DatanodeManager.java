@@ -456,7 +456,7 @@ public class DatanodeManager {
    * Remove a datanode
    * @throws UnregisteredNodeException 
    */
-  public void removeDatanode(final DatanodeID node
+  public void removeDatanode(DatanodeID node
       ) throws UnregisteredNodeException {
     namesystem.writeLock();
     try {

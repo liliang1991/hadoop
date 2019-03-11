@@ -24,26 +24,40 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.fs.FileNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.manager.FileBlockManager;
+import org.apache.hadoop.hdfs.server.namenode.test.hdfs.manager.FileDatanodeManager;
 
 /**
  * Manage node decommissioning.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-class DecommissionManager {
+public class DecommissionManager {
   static final Log LOG = LogFactory.getLog(DecommissionManager.class);
 
-  private final Namesystem namesystem;
-  private final BlockManager blockmanager;
-
-  DecommissionManager(final Namesystem namesystem,
-      final BlockManager blockmanager) {
+   Namesystem namesystem;
+  BlockManager blockmanager;
+  FileNamesystem fileNamesystem;
+  FileBlockManager fileBlockManager;
+  public DecommissionManager(Namesystem namesystem,
+      BlockManager blockmanager) {
     this.namesystem = namesystem;
     this.blockmanager = blockmanager;
   }
+  public DecommissionManager(Namesystem namesystem,
+                             FileBlockManager blockmanager) {
+    this.namesystem = namesystem;
+    this.fileBlockManager = blockmanager;
+  }
 
+/*  public DecommissionManager(FileNamesystem namesystem,
+                              FileBlockManager blockmanager) {
+    this.fileNamesystem = namesystem;
+    this.fileBlockManager= blockmanager;
+  }*/
   /** Periodically check decommission status. */
-  class Monitor implements Runnable {
+  public class Monitor implements Runnable {
     /** recheckInterval is how often namenode checks
      *  if a node has finished decommission
      */
@@ -53,7 +67,7 @@ class DecommissionManager {
     /** firstkey can be initialized to anything. */
     private String firstkey = "";
 
-    Monitor(int recheckIntervalInSecond, int numNodesPerCheck) {
+   public Monitor(int recheckIntervalInSecond, int numNodesPerCheck) {
       this.recheckInterval = recheckIntervalInSecond * 1000L;
       this.numNodesPerCheck = numNodesPerCheck;
     }
@@ -81,24 +95,46 @@ class DecommissionManager {
     }
     
     private void check() {
-      final DatanodeManager dm = blockmanager.getDatanodeManager();
-      int count = 0;
-      for(Map.Entry<String, DatanodeDescriptor> entry
-          : dm.getDatanodeCyclicIteration(firstkey)) {
-        final DatanodeDescriptor d = entry.getValue();
-        firstkey = entry.getKey();
+      if (blockmanager != null) {
+        final DatanodeManager dm = blockmanager.getDatanodeManager();
+        int count = 0;
+        for(Map.Entry<String, DatanodeDescriptor> entry
+                : dm.getDatanodeCyclicIteration(firstkey)) {
+          final DatanodeDescriptor d = entry.getValue();
+          firstkey = entry.getKey();
 
-        if (d.isDecommissionInProgress()) {
-          try {
-            dm.checkDecommissionState(d);
-          } catch(Exception e) {
-            LOG.warn("entry=" + entry, e);
+          if (d.isDecommissionInProgress()) {
+            try {
+              dm.checkDecommissionState(d);
+            } catch(Exception e) {
+              LOG.warn("entry=" + entry, e);
+            }
+            if (++count == numNodesPerCheck) {
+              return;
+            }
           }
-          if (++count == numNodesPerCheck) {
-            return;
+        }
+      }else{
+        final FileDatanodeManager dm = fileBlockManager.getDatanodeManager();
+        int count = 0;
+        for(Map.Entry<String, DatanodeDescriptor> entry
+                : dm.getDatanodeCyclicIteration(firstkey)) {
+          final DatanodeDescriptor d = entry.getValue();
+          firstkey = entry.getKey();
+
+          if (d.isDecommissionInProgress()) {
+            try {
+              dm.checkDecommissionState(d);
+            } catch(Exception e) {
+              LOG.warn("entry=" + entry, e);
+            }
+            if (++count == numNodesPerCheck) {
+              return;
+            }
           }
         }
       }
+
     }
   }
 }

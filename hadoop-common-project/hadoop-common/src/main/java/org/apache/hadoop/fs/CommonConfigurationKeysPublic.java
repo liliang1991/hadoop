@@ -49,7 +49,7 @@ public class CommonConfigurationKeysPublic {
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  FS_DEFAULT_NAME_KEY = "fs.defaultFS";
   /** Default value for FS_DEFAULT_NAME_KEY */
-  public static final String  FS_DEFAULT_NAME_DEFAULT = "file:///";
+  public static final String  FS_DEFAULT_NAME_DEFAULT = "hdfs://localhost:9000";
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  FS_DF_INTERVAL_KEY = "fs.df.interval"; 
   /** Default value for FS_DF_INTERVAL_KEY */

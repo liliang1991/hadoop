@@ -83,6 +83,7 @@ public class Block implements Writable, Comparable<Block> {
   }
 
   private long blockId;
+  //数据块大小
   private long numBytes;
   private long generationStamp;
 

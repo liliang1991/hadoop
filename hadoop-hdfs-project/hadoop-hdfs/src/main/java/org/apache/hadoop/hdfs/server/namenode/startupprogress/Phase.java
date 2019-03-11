@@ -26,22 +26,27 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public enum Phase {
   /**
    * The namenode is loading the fsimage file into memory.
+   *namenode正在将fsimage文件加载到内存中
    */
   LOADING_FSIMAGE("LoadingFsImage", "Loading fsimage"),
 
   /**
    * The namenode is loading the edits file and applying its operations to the
    * in-memory metadata.
+   *
+   * namenode正在加载编辑文件并将其操作应用于内存元数据。
    */
   LOADING_EDITS("LoadingEdits", "Loading edits"),
 
   /**
    * The namenode is saving a new checkpoint.
+   * 名称节点正在保存新的检查点。
    */
   SAVING_CHECKPOINT("SavingCheckpoint", "Saving checkpoint"),
 
   /**
    * The namenode has entered safemode, awaiting block reports from data nodes.
+   *  名称节点已进入安全模式，等待来自数据节点的块报告。
    */
   SAFEMODE("SafeMode", "Safe mode");
 

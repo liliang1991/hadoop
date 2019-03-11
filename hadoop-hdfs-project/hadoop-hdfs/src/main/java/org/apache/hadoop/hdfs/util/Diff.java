@@ -74,7 +74,7 @@ import com.google.common.base.Preconditions;
  */
 public class Diff<K, E extends Diff.Element<K>> {
   public static enum ListType {
-    CREATED, DELETED
+    CREATED,  DELETED
   }
 
   /** An interface for the elements in a {@link Diff}. */

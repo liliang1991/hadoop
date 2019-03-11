@@ -18,6 +18,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 
+import javax.servlet.ServletContext;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
@@ -49,7 +50,9 @@ public class FileNameNodeHttpServer {
         httpServer.setAttribute(NAMENODE_ADDRESS_ATTRIBUTE_KEY,
                 NetUtils.getConnectAddress(nameNodeAddress));
     }
-
+    public static MyNameNode getNameNodeFromContext(ServletContext context) {
+        return (MyNameNode)context.getAttribute(NAMENODE_ATTRIBUTE_KEY);
+    }
     public InetSocketAddress getHttpAddress() {
         return httpAddress;
     }

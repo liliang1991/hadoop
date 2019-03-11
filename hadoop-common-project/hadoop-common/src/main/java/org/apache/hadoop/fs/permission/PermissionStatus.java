@@ -58,7 +58,7 @@ public class PermissionStatus implements Writable {
   private String groupname;
   private FsPermission permission;
 
-  private PermissionStatus() {}
+  public PermissionStatus() {}
 
   /** Constructor */
   public PermissionStatus(String user, String group, FsPermission permission) {

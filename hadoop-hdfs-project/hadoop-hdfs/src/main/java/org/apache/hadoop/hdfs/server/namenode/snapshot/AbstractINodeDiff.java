@@ -47,15 +47,15 @@ import com.google.common.base.Preconditions;
  *   s_k     = s_{k+1} - d_k = (current state) - d_n - d_{n-1} - ... - d_k.
  * </pre>
  */
-abstract class AbstractINodeDiff<N extends INode,
+public abstract class AbstractINodeDiff<N extends INode,
                                  A extends INodeAttributes,
                                  D extends AbstractINodeDiff<N, A, D>>
     implements Comparable<Integer> {
 
   /** The snapshot will be obtained after this diff is applied. */
-  Snapshot snapshot;
+ public Snapshot snapshot;
   /** The snapshot inode data.  It is null when there is no change. */
-  A snapshotINode;
+  public A snapshotINode;
   /**
    * Posterior diff is the diff happened after this diff.
    * The posterior diff should be first applied to obtain the posterior
@@ -64,7 +64,7 @@ abstract class AbstractINodeDiff<N extends INode,
    */
   private D posteriorDiff;
 
-  AbstractINodeDiff(Snapshot snapshot, A snapshotINode, D posteriorDiff) {
+  public AbstractINodeDiff(Snapshot snapshot, A snapshotINode, D posteriorDiff) {
     Preconditions.checkNotNull(snapshot, "snapshot is null");
 
     this.snapshot = snapshot;
@@ -88,7 +88,7 @@ abstract class AbstractINodeDiff<N extends INode,
   }
 
   /** @return the posterior diff. */
-  final D getPosterior() {
+ public final D getPosterior() {
     return posteriorDiff;
   }
 
@@ -117,7 +117,7 @@ abstract class AbstractINodeDiff<N extends INode,
   }
 
   /** Combine the posterior diff and collect blocks for deletion. */
-  abstract Quota.Counts combinePosteriorAndCollectBlocks(final N currentINode,
+ public abstract Quota.Counts combinePosteriorAndCollectBlocks(final N currentINode,
       final D posterior, final BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes);
   
@@ -127,7 +127,7 @@ abstract class AbstractINodeDiff<N extends INode,
    * @param collectedBlocks Used to collect blocks for deletion.
    * @return quota usage delta
    */
-  abstract Quota.Counts destroyDiffAndCollectBlocks(final N currentINode,
+  public abstract Quota.Counts destroyDiffAndCollectBlocks(final N currentINode,
       final BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes);
 
   @Override
@@ -136,11 +136,11 @@ abstract class AbstractINodeDiff<N extends INode,
         + (posteriorDiff == null? null: posteriorDiff.snapshot) + ")";
   }
 
-  void writeSnapshot(DataOutput out) throws IOException {
+  public void writeSnapshot(DataOutput out) throws IOException {
     // Assume the snapshot is recorded before, write id only.
     out.writeInt(snapshot.getId());
   }
   
-  abstract void write(DataOutput out, ReferenceMap referenceMap
+  public abstract void write(DataOutput out, ReferenceMap referenceMap
       ) throws IOException;
 }

@@ -251,7 +251,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * Move block to the head of the list of blocks belonging to the data-node.
    * @return the index of the head of the blockList
    */
-  int moveBlockToHead(BlockInfo b, int curIndex, int headIndex) {
+ public int moveBlockToHead(BlockInfo b, int curIndex, int headIndex) {
     blockList = b.moveBlockToHead(blockList, this, curIndex, headIndex);
     return curIndex;
   }
@@ -325,7 +325,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     private BlockInfo current;
     private DatanodeDescriptor node;
       
-    BlockIterator(BlockInfo head, DatanodeDescriptor dn) {
+    public BlockIterator(BlockInfo head, DatanodeDescriptor dn) {
       this.current = head;
       this.node = dn;
     }
@@ -387,7 +387,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * The number of work items that are pending to be replicated
    */
-  int getNumberOfBlocksToBeReplicated() {
+ public int getNumberOfBlocksToBeReplicated() {
     return replicateBlocks.size();
   }
 
@@ -441,7 +441,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * Decrements counter for number of blocks scheduled.
    */
-  void decBlocksScheduled() {
+ public void decBlocksScheduled() {
     if (prevApproxBlocksScheduled > 0) {
       prevApproxBlocksScheduled--;
     } else if (currApproxBlocksScheduled > 0) {
@@ -482,7 +482,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     private int underReplicatedInOpenFiles;
     private long startTime;
     
-    synchronized void set(int underRep,
+   public synchronized void set(int underRep,
         int onlyRep, int underConstruction) {
       if (isDecommissionInProgress() == false) {
         return;
@@ -584,7 +584,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     firstBlockReport = false;
   }
   
-  boolean isFirstBlockReport() {
+public   boolean isFirstBlockReport() {
     return firstBlockReport;
   }
 

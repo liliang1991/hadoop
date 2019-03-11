@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.BindException;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
@@ -579,9 +580,12 @@ public class HttpServer implements FilterContainer {
    * @return the pathname as a URL
    * @throws FileNotFoundException if 'webapps' directory cannot be found on CLASSPATH.
    */
-  protected String getWebAppsPath(String appName) throws FileNotFoundException {
+  protected String getWebAppsPath(String appName) throws FileNotFoundException, MalformedURLException {
     URL url = getClass().getClassLoader().getResource("webapps/" + appName);
-    if (url == null) 
+    if(url==null){
+    url=new URL("/home/moon/work/workspace/hadoop/hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/hdfs");
+    }
+    if (url == null)
       throw new FileNotFoundException("webapps/" + appName
           + " not found in CLASSPATH");
     String urlString = url.toString();

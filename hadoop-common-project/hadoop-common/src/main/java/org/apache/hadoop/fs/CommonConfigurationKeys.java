@@ -32,7 +32,7 @@ import org.apache.hadoop.security.authorize.Service;
  *
  */
 
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
 

@@ -35,7 +35,7 @@ import org.apache.hadoop.hdfs.server.namenode.Quota;
  * @param <N> The {@link INode} type.
  * @param <D> The diff type, which must extend {@link AbstractINodeDiff}.
  */
-abstract class AbstractINodeDiffList<N extends INode,
+public abstract class AbstractINodeDiffList<N extends INode,
                                      A extends INodeAttributes,
                                      D extends AbstractINodeDiff<N, A, D>> 
     implements Iterable<D> {
@@ -53,10 +53,10 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
 
   /** @return an {@link AbstractINodeDiff}. */
-  abstract D createDiff(Snapshot snapshot, N currentINode);
+ public abstract D createDiff(Snapshot snapshot, N currentINode);
 
   /** @return a snapshot copy of the current inode. */  
-  abstract A createSnapshotCopy(N currentINode);
+ public abstract A createSnapshotCopy(N currentINode);
 
   /**
    * Delete a snapshot. The synchronization of the diff list will be done 
@@ -120,7 +120,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
 
   /** Add an {@link AbstractINodeDiff} for the given snapshot. */
-  final D addDiff(Snapshot latest, N currentINode)
+ public final D addDiff(Snapshot latest, N currentINode)
       throws QuotaExceededException {
     currentINode.addSpaceConsumed(1, 0, true);
     return addLast(createDiff(latest, currentINode));
@@ -137,7 +137,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
   
   /** Add the diff to the beginning of the list. */
-  final void addFirst(D diff) {
+ public final void addFirst(D diff) {
     final D first = diffs.isEmpty()? null: diffs.get(0);
     diffs.add(0, diff);
     diff.setPosterior(first);
@@ -247,7 +247,7 @@ abstract class AbstractINodeDiffList<N extends INode,
    *         change, file creation/deletion under the directory) have happened
    *         between snapshots.
    */
-  final boolean changedBetweenSnapshots(Snapshot earlier, Snapshot later) {
+ public final boolean changedBetweenSnapshots(Snapshot earlier, Snapshot later) {
     final int size = diffs.size();
     int earlierDiffIndex = Collections.binarySearch(diffs, earlier.getId());
     if (-earlierDiffIndex - 1 == size) {
@@ -281,7 +281,7 @@ abstract class AbstractINodeDiffList<N extends INode,
    * Check if the latest snapshot diff exists.  If not, add it.
    * @return the latest snapshot diff, which is never null.
    */
-  final D checkAndAddLatestSnapshotDiff(Snapshot latest, N currentINode)
+  public final D checkAndAddLatestSnapshotDiff(Snapshot latest, N currentINode)
       throws QuotaExceededException {
     final D last = getLast();
     if (last != null

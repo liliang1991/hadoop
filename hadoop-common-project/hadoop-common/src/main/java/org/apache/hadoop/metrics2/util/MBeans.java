@@ -84,7 +84,7 @@ public class MBeans {
     }
   }
 
-  static private ObjectName getMBeanName(String serviceName, String nameName) {
+  static public ObjectName getMBeanName(String serviceName, String nameName) {
     ObjectName name = null;
     String nameStr = "Hadoop:service="+ serviceName +",name="+ nameName;
     try {

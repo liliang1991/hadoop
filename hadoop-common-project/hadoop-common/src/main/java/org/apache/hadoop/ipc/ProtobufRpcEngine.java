@@ -596,6 +596,7 @@ public class ProtobufRpcEngine implements RpcEngine {
         } catch (ServiceException e) {
           throw (Exception) e.getCause();
         } catch (Exception e) {
+          e.printStackTrace();
           throw e;
         }
         return new RpcResponseWrapper(result);

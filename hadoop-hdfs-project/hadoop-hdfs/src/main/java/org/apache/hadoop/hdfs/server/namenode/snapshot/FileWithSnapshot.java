@@ -49,7 +49,7 @@ public interface FileWithSnapshot {
     }
 
     /** Constructor used by FSImage loading */
-    FileDiff(Snapshot snapshot, INodeFileAttributes snapshotINode,
+  public   FileDiff(Snapshot snapshot, INodeFileAttributes snapshotINode,
         FileDiff posteriorDiff, long fileSize) {
       super(snapshot, snapshotINode, posteriorDiff);
       this.fileSize = fileSize;
@@ -83,7 +83,7 @@ public interface FileWithSnapshot {
     }
     
     @Override
-    Quota.Counts combinePosteriorAndCollectBlocks(INodeFile currentINode,
+   public Quota.Counts combinePosteriorAndCollectBlocks(INodeFile currentINode,
         FileDiff posterior, BlocksMapUpdateInfo collectedBlocks,
         final List<INode> removedINodes) {
       return updateQuotaAndCollectBlocks(currentINode, posterior,
@@ -97,7 +97,7 @@ public interface FileWithSnapshot {
     }
 
     @Override
-    void write(DataOutput out, ReferenceMap referenceMap) throws IOException {
+   public void write(DataOutput out, ReferenceMap referenceMap) throws IOException {
       writeSnapshot(out);
       out.writeLong(fileSize);
 
@@ -111,7 +111,7 @@ public interface FileWithSnapshot {
     }
 
     @Override
-    Quota.Counts destroyDiffAndCollectBlocks(INodeFile currentINode,
+  public   Quota.Counts destroyDiffAndCollectBlocks(INodeFile currentINode,
         BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
       return updateQuotaAndCollectBlocks(currentINode, this,
           collectedBlocks, removedINodes);
@@ -123,12 +123,12 @@ public interface FileWithSnapshot {
       extends AbstractINodeDiffList<INodeFile, INodeFileAttributes, FileDiff> {
 
     @Override
-    FileDiff createDiff(Snapshot snapshot, INodeFile file) {
+   public FileDiff createDiff(Snapshot snapshot, INodeFile file) {
       return new FileDiff(snapshot, file);
     }
     
     @Override
-    INodeFileAttributes createSnapshotCopy(INodeFile currentINode) {
+   public INodeFileAttributes createSnapshotCopy(INodeFile currentINode) {
       return new INodeFileAttributes.SnapshotCopy(currentINode);
     }
   }

@@ -2021,7 +2021,7 @@ public abstract class Server {
         new ByteArrayOutputStream(INITIAL_RESP_BUF_SIZE);
       while (running) {
         try {
-          final Call call = callQueue.take(); // pop the queue; maybe blocked here
+           final Call call = callQueue.take(); // pop the queue; maybe blocked here
           if (LOG.isDebugEnabled()) {
             LOG.debug(getName() + ": " + call + " for RpcKind " + call.rpcKind);
           }

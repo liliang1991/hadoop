@@ -28,15 +28,15 @@ public class NumberReplicas {
   private int excessReplicas;
   private int replicasOnStaleNodes;
 
-  NumberReplicas() {
+  public NumberReplicas() {
     initialize(0, 0, 0, 0, 0);
   }
 
-  NumberReplicas(int live, int decommissioned, int corrupt, int excess, int stale) {
+  public NumberReplicas(int live, int decommissioned, int corrupt, int excess, int stale) {
     initialize(live, decommissioned, corrupt, excess, stale);
   }
 
-  void initialize(int live, int decommissioned, int corrupt, int excess, int stale) {
+ public   void initialize(int live, int decommissioned, int corrupt, int excess, int stale) {
     liveReplicas = live;
     decommissionedReplicas = decommissioned;
     corruptReplicas = corrupt;
